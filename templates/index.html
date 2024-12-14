@@ -1,0 +1,29 @@
+<!-- 
+This template is the Login page for the application. 
+It provides a simple form where users can enter their username and password to access the dashboard.
+
+Key Features:
+- **Form Submission**: Sends user credentials to the server via POST to the index route for authentication.
+- **Validation**: Ensures both username and password fields are filled before submission.
+- **User Guidance**: Includes clear labels and instructions for ease of use.
+-->
+
+
+{% extends "layout.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="landing-user">
+    <h2>Login</h2>
+    <p>Enter your username and password to access the dashboard.</p>
+    <form method="POST" action="{{ url_for('index') }}">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br><br>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+
+        <button type="submit">Login</button>
+    </form>
+</div>
+{% endblock %}

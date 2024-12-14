@@ -1,0 +1,130 @@
+<!-- 
+  File: key_listener_test.html
+  Description: 
+  This supplementary file is a test case for implementing JavaScript-based 
+  custom navigation within a grid of form inputs. It demonstrates the use of 
+  key listeners to handle intuitive navigation using Enter, Shift+Enter, Tab, 
+  and Shift+Tab keys. This file is standalone and does not integrate with the 
+  Python application directly but serves as a testing ground for enhancing user 
+  experience in forms.
+
+  Purpose:
+  - Test JavaScript event handling for keyboard navigation.
+  - Validate grid navigation logic before integrating into larger application.
+
+  Note: This file is for testing purposes only and is not critical to the core 
+  functionality of the Python application.
+-->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+.comps-grid {
+  display: grid;
+  grid-template-columns: 200px repeat(4, 1fr); /* label + 4 inputs for example */
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.comps-grid label {
+  text-align: right;
+}
+
+.comps-grid input,
+.comps-grid select {
+  width: 100%;
+  padding: 5px;
+}
+</style>
+<title>Custom Navigation</title>
+</head>
+<body>
+
+<div class="comps-grid" id="comps-grid">
+  <!-- Example: Two rows, four columns of inputs plus a label column -->
+  <!-- Row 0 -->
+  <label for="field00">Field 0,0</label>
+  <input type="text" id="field00" data-row="0" data-col="0">
+  <input type="text" id="field01" data-row="0" data-col="1">
+  <input type="text" id="field02" data-row="0" data-col="2">
+  <input type="text" id="field03" data-row="0" data-col="3">
+
+  <!-- Row 1 -->
+  <label for="field10">Field 1,0</label>
+  <input type="text" id="field10" data-row="1" data-col="0">
+  <input type="text" id="field11" data-row="1" data-col="1">
+  <input type="text" id="field12" data-row="1" data-col="2">
+  <input type="text" id="field13" data-row="1" data-col="3">
+</div>
+
+<script>
+/* 
+  JavaScript for custom navigation within the grid. 
+  Handles the following key events:
+  - Enter: Move down one row.
+  - Shift+Enter: Move up one row.
+  - Tab: Move right one column.
+  - Shift+Tab: Move left one column.
+
+  Focuses on the next valid input field if navigation is possible.
+*/
+document.addEventListener('keydown', function(e) {
+  const activeEl = document.activeElement;
+
+  // Check if active element is inside comps-grid
+  const inCompsGrid = activeEl && activeEl.closest('#comps-grid');
+  if (!inCompsGrid) return; // Only apply custom logic if we're inside the comps-grid
+
+  const row = parseInt(activeEl.getAttribute('data-row'), 10);
+  const col = parseInt(activeEl.getAttribute('data-col'), 10);
+
+  // If these aren't valid numbers, do nothing
+  if (isNaN(row) || isNaN(col)) return;
+
+  let newRow = row;
+  let newCol = col;
+
+  // We will handle Enter, Shift+Enter, Tab, and Shift+Tab
+  // Enter => move down, Shift+Enter => move up
+  // Tab => move right, Shift+Tab => move left
+
+  if (e.key === 'Enter') {
+    e.preventDefault(); // Prevent any default Enter action (like form submission)
+    if (e.shiftKey) {
+      // Shift+Enter: move up (decrement row if possible)
+      newRow = Math.max(row - 1, 0);
+    } else {
+      // Enter: move down (increment row)
+      newRow = row + 1;
+    }
+  } else if (e.key === 'Tab') {
+    e.preventDefault(); // Prevent default tabbing
+    if (e.shiftKey) {
+      // Shift+Tab: move left
+      newCol = Math.max(col - 1, 0);
+    } else {
+      // Tab: move right
+      newCol = col + 1;
+    }
+  } else {
+    // For other keys, do nothing
+    return;
+  }
+
+  // Find the next field
+  const nextField = document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"]`);
+  if (nextField) {
+    nextField.focus();
+  } else { 
+    // TODO: Handle edge cases (e.g., moving to next row when at the end of a row)
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,462 @@
+<!-- 
+This template is Step 2 of the Property Valuation Form, designed for detailed data entry 
+and comparison of the subject property against comparable sales. It includes integration 
+of mapping tools, keyboard navigation, and form enhancements for user efficiency.
+
+Key Features:
+1. **Grid-Based Form Structure**: Captures property and comparable data in a user-friendly layout, 
+   allowing dynamic entry and validation of required fields.
+2. **Dynamic Mapping**: Leverages Leaflet.js to display a map with markers for the subject 
+   property and comparable addresses, dynamically updated based on user input.
+3. **Keyboard Navigation**: Implements intuitive navigation using `Tab`, `Enter`, and `Shift+Enter` 
+   for seamless transitions between grid fields.
+4. **Dynamic Dropdowns**: Uses JavaScript to populate options for fields like property style, 
+   view, condition, basement, and garage, ensuring flexibility and ease of updating.
+5. **Cumulative DOM (Days on Market)**: Calculates the days on market for comparable properties 
+   based on list and sale dates.
+6. **Real-Time Adjustments**: Placeholder for Net Adjustment and Adjusted Sale Price calculations, 
+   which could integrate with appraiser-specific logic for automated evaluation.
+
+Critical TODOs:
+- **Database Integration**: Ensure proper functionality with the backend database to save 
+  and retrieve user inputs dynamically.
+  
+Comments:
+- TODO: Ensure keyboard navigation doesn't interfere with other form elements, handle edge cases.
+- TODO: Implement calculations for Net Adjustment and Adjusted Sale Price.
+- TODO: Explore free or cost-effective APIs for generating and exporting PDFs.
+- TODO: Incorporate Google Street View for front views of the subject property.
+- Consolidate JavaScript files for easier maintenance and debugging.
+-->
+
+{% extends "layout.html" %}
+
+{% block title %}Valuation Form: Step 2{% endblock %}
+
+{% block content %}
+<!-- TODO: For PDF <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}" media="print"> -->
+<div id="property_type_data" data-property-type="{{ property_type }}"></div>
+<div id="property_type_data_coordinates" 
+    data-property-type="{{ property_type }}" 
+    data-latitude="{{ latitude }}" 
+    data-longitude="{{ longitude }}"></div>
+<h2 class="form-title">Property Valuation Form: Step 2</h2>
+
+<div class="step2-form-container">
+    <form method="POST" action="{{ url_for('form_step2', file_number=file_number) }}" id="valuation-form-step2">
+        <div class="form-grid">
+            <!-- File Number -->
+            <div class="form-field file-number">
+                <label for="file_number">File Number:</label>
+                <input type="text" id="file_number" name="file_number" value="{{ file_number }}" readonly>
+            </div>
+
+            <!-- Borrower Name -->
+            <div class="form-field borrower-name">
+                <label for="borrower_name">Borrower Name:</label>
+                <input type="text" id="borrower_name" name="borrower_name" value="{{ borrower_name }}" readonly>
+            </div>
+
+            <!-- Property Type Dropdown -->
+            <div class="form-field property-type">
+                <label for="property_type">Property Type:</label>
+                <select id="property_type" name="property_type" required>
+                    <option value="{{ property_type }}" selected>{{ property_type }}</option>
+                    <!-- Other options will be populated via JavaScript -->
+                </select>
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <!-- Address -->
+            <div class="form-field address">
+                <label for="address">Address:</label>
+                <input type="text" id="address" name="address" value="{{ address }}" readonly>
+            </div>
+
+            <!-- Unit -->
+            <div class="form-field unit">
+                <label for="unit">Unit:</label>
+                <input type="text" id="unit" name="unit" value="{{ unit }}" maxlength="6">
+            </div>
+
+            <!-- City -->
+            <div class="form-field city">
+                <label for="city">City:</label>
+                <input type="text" id="city" name="city" value="{{ city }}">
+            </div>
+
+            <!-- State -->
+            <div class="form-field state">
+                <label for="state">State:</label>
+                <input type="text" id="state" name="state" value="{{ state }}" maxlength="2">
+            </div>
+
+            <!-- ZIP Code -->
+            <div class="form-field zip">
+                <label for="zip">ZIP Code:</label>
+                <input type="text" id="zip" name="zip" value="{{ zip }}" maxlength="5">
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <!-- County --> <!-- This is intended for ATTOM implementation -->
+            <div class="form-field county">
+                <label for="county">County:</label>
+                <input id="county" name="county" value="{{ county }}" type="text">
+            </div>
+
+            <!-- Parcel Number --> <!-- This is intended for ATTOM implementation -->
+            <div class="form-field parcel-number">
+                <label for="parcel_number">Parcel Number:</label>
+                <input id="parcel_number" name="parcel_number" value="{{ parcel_number }}" type="text">
+            </div>
+        </div>
+
+        <h3>Street Map</h3>
+        <div id="map-container">
+            <div id="map" style="height:300px;"></div>
+        </div>
+
+        <h3>Subject Property and Comparables</h3>
+
+        <!-- Grid-based structure replacing the table -->
+        <div class="comps-grid" id="comps-grid">
+            <!-- Header Row -->
+            <div class="row">
+                <label for="header_placeholder"></label>
+                <div class="column-header">Subject</div>
+                <div class="column-header">Sale 1</div>
+                <div class="column-header">Sale 2</div>
+                <div class="column-header">Sale 3</div>
+            </div>
+
+            <!-- Row: Street Address -->
+            <div class="row">
+                <label for="subject_address">Street Address</label>
+                <input type="text" id="subject_address" name="subject_address" value="{{ address }}" required data-row="0" data-col="0">
+                <input type="text" id="comp1_address" name="comp1_address" required data-row="0" data-col="1">
+                <input type="text" id="comp2_address" name="comp2_address" required data-row="0" data-col="2">
+                <input type="text" id="comp3_address" name="comp3_address" required data-row="0" data-col="3">
+            </div>
+
+            <!-- Row: Unit # -->
+            <div class="row">
+                <label for="subject_unit">Unit #</label>
+                <input type="text" id="subject_unit" name="subject_unit" value="{{ unit }}" data-row="1" data-col="0">
+                <input type="text" id="comp1_unit" name="comp1_unit" data-row="1" data-col="1">
+                <input type="text" id="comp2_unit" name="comp2_unit" data-row="1" data-col="2">
+                <input type="text" id="comp3_unit" name="comp3_unit" data-row="1" data-col="3">
+            </div>
+
+            <!-- City -->
+            <div class="row">
+                <label for="subject_city">City</label>
+                <input type="text" id="subject_city" name="subject_city" value="{{ city }}" required data-row="2" data-col="0">
+                <input type="text" id="comp1_city" name="comp1_city" required data-row="2" data-col="1">
+                <input type="text" id="comp2_city" name="comp2_city" required data-row="2" data-col="2">
+                <input type="text" id="comp3_city" name="comp3_city" required data-row="2" data-col="3">
+            </div>
+
+            <!-- State -->
+            <div class="row">
+                <label for="subject_state">State</label>
+                <input type="text" id="subject_state" name="subject_state" value="{{ state }}" required data-row="3" data-col="0">
+                <input type="text" id="comp1_state" name="comp1_state" value="{{ state }}" required data-row="3" data-col="1">
+                <input type="text" id="comp2_state" name="comp2_state" value="{{ state }}" required data-row="3" data-col="2">
+                <input type="text" id="comp3_state" name="comp3_state" value="{{ state }}" required data-row="3" data-col="3">
+            </div>
+
+            <!-- ZIP -->
+            <div class="row">
+                <label for="subject_zip">Zip</label>
+                <input type="text" id="subject_zip" name="subject_zip" value="{{ zip }}" required data-row="4" data-col="0">
+                <input type="text" id="comp1_zip" name="comp1_zip" required data-row="4" data-col="1">
+                <input type="text" id="comp2_zip" name="comp2_zip" required data-row="4" data-col="2">
+                <input type="text" id="comp3_zip" name="comp3_zip" required data-row="4" data-col="3">
+            </div>
+
+            <!-- Data Source -->
+            <div class="row">
+                <label for="subject_data_source">Data Source</label>
+                <input type="text" id="subject_data_source" name="subject_data_source" required data-row="5" data-col="0">
+                <input type="text" id="comp1_data_source" name="comp1_data_source" required data-row="5" data-col="1">
+                <input type="text" id="comp2_data_source" name="comp2_data_source" required data-row="5" data-col="2">
+                <input type="text" id="comp3_data_source" name="comp3_data_source" required data-row="5" data-col="3">
+            </div>
+
+            <!-- MLS # -->
+            <div class="row">
+                <label for="subject_mls">MLS #</label>
+                <input type="text" id="subject_mls" name="subject_mls" value="{{ subject_mls }}" data-row="6" data-col="0">
+                <input type="text" id="comp1_mls" name="comp1_mls" required data-row="6" data-col="1">
+                <input type="text" id="comp2_mls" name="comp2_mls" required data-row="6" data-col="2">
+                <input type="text" id="comp3_mls" name="comp3_mls" required data-row="6" data-col="3">
+            </div>
+
+            <!-- Original List Price -->
+            <div class="row">
+                <label>Original List Price</label>
+                <div> </div>
+                <input type="number" id="comp1_orig_list_price" name="comp1_original_list_price" required data-row="7" data-col="1">
+                <input type="number" id="comp2_orig_list_price" name="comp2_original_list_price" required data-row="7" data-col="2">
+                <input type="number" id="comp3_orig_list_price" name="comp3_original_list_price" required data-row="7" data-col="3">
+            </div>
+
+            <!-- Original List Date -->
+            <div class="row">
+                <label>Original List Date</label>
+                <div> </div>
+                <input type="date" id="comp1_orig_list_date" name="comp1_original_list_date" required data-row="8" data-col="1">
+                <input type="date" id="comp2_orig_list_date" name="comp2_original_list_date" required data-row="8" data-col="2">
+                <input type="date" id="comp3_orig_list_date" name="comp3_original_list_date" required data-row="8" data-col="3">
+            </div>
+
+            <!-- Sale Price -->
+            <div class="row">
+                <label>Sale Price</label>
+                <div> </div>
+                <input type="number" id="comp1_sale_price" name="comp1_sale_price" required data-row="9" data-col="1">
+                <input type="number" id="comp2_sale_price" name="comp2_sale_price" required data-row="9" data-col="2">
+                <input type="number" id="comp3_sale_price" name="comp3_sale_price" required data-row="9" data-col="3">
+            </div>
+
+            <!-- Sale Date -->
+            <div class="row">
+                <label>Sale Date</label>
+                <div> </div>
+                <input type="date" id="comp1_sale_date" name="comp1_sale_date" required data-row="10" data-col="1">
+                <input type="date" id="comp2_sale_date" name="comp2_sale_date" required data-row="10" data-col="2">
+                <input type="date" id="comp3_sale_date" name="comp3_sale_date" required data-row="10" data-col="3">
+            </div>
+
+            <!-- Cumulative DOM -->
+            <div class="row">
+                <label>Cumulative DOM</label>
+                <div> </div>
+                <input type="number" id="comp1_cdom" name="comp1_cdom" readonly data-row="11" data-col="1">
+                <input type="number" id="comp2_cdom" name="comp2_cdom" readonly data-row="11" data-col="2">
+                <input type="number" id="comp3_cdom" name="comp3_cdom" readonly data-row="11" data-col="3">
+            </div>
+
+            <!-- Site Size -->
+            <div class="row">
+                <label>Site Size</label>
+                <input type="number" id="subject_site_size" name="subject_site_size" required data-row="12" data-col="0">
+                <input type="number" id="comp1_site_size" name="comp1_site_size" required data-row="12" data-col="1">
+                <input type="number" id="comp2_site_size" name="comp2_site_size" required data-row="12" data-col="2">
+                <input type="number" id="comp3_site_size" name="comp3_site_size" required data-row="12" data-col="3">
+            </div>
+
+            <!-- Location -->
+            <div class="row">
+                <label>Location</label>
+                <input type="text" id="subject_location" name="subject_location" required data-row="13" data-col="0">
+                <input type="text" id="comp1_location" name="comp1_location" required data-row="13" data-col="1">
+                <input type="text" id="comp2_location" name="comp2_location" required data-row="13" data-col="2">
+                <input type="text" id="comp3_location" name="comp3_location" required data-row="13" data-col="3">
+            </div>
+
+            <!-- View -->
+            <div class="row">
+                <label>View</label>
+                <select id="subject_view" name="subject_view" required data-row="14" data-col="0"></select>
+                <select id="comp1_view" name="comp1_view" required data-row="14" data-col="1"></select>
+                <select id="comp2_view" name="comp2_view" required data-row="14" data-col="2"></select>
+                <select id="comp3_view" name="comp3_view" required data-row="14" data-col="3"></select>
+            </div>
+            <!-- Des/Style -->  
+            <div class="row">
+                <label>Des/Style</label>
+                <select id="subject_des_style" name="subject_des_style" required data-row="15" data-col="0">
+                    <option value="{{ property_type }}" selected>{{ property_type }}</option>
+                    <!-- Options will be populated by JavaScript below -->
+                </select>
+                <select id="comp1_des_style" name="comp1_des_style" required data-row="15" data-col="1"></select>
+                <select id="comp2_des_style" name="comp2_des_style" required data-row="15" data-col="2"></select>
+                <select id="comp3_des_style" name="comp3_des_style" required data-row="15" data-col="3"></select>
+            </div>
+
+            <!-- Condition -->
+            <div class="row">
+                <label>Condition</label>
+                <select id="subject_condition" name="subject_condition" required data-row="16" data-col="0"></select>
+                <select id="comp1_condition" name="comp1_condition" required data-row="16" data-col="1"></select>
+                <select id="comp2_condition" name="comp2_condition" required data-row="16" data-col="2"></select>
+                <select id="comp3_condition" name="comp3_condition" required data-row="16" data-col="3"></select>
+            </div>
+
+            <!-- Beds -->
+            <div class="row">
+                <label>Beds</label>
+                <input type="number" id="subject_beds" name="subject_beds" required data-row="17" data-col="0">
+                <input type="number" id="comp1_beds" name="comp1_beds" required data-row="17" data-col="1">
+                <input type="number" id="comp2_beds" name="comp2_beds" required data-row="17" data-col="2">
+                <input type="number" id="comp3_beds" name="comp3_beds" required data-row="17" data-col="3">
+            </div>
+
+            <!-- Full Baths -->
+            <div class="row">
+                <label>Full Baths</label>
+                <input type="number" id="subject_full_baths" name="subject_full_baths" required data-row="18" data-col="0">
+                <input type="number" id="comp1_full_baths" name="comp1_full_baths" required data-row="18" data-col="1">
+                <input type="number" id="comp2_full_baths" name="comp2_full_baths" required data-row="18" data-col="2">
+                <input type="number" id="comp3_full_baths" name="comp3_full_baths" required data-row="18" data-col="3">
+            </div>
+
+            <!-- Half Baths -->
+            <div class="row">
+                <label>Half Baths</label>
+                <input type="number" id="subject_half_baths" name="subject_half_baths" data-row="19" data-col="0">
+                <input type="number" id="comp1_half_baths" name="comp1_half_baths" data-row="19" data-col="1">
+                <input type="number" id="comp2_half_baths" name="comp2_half_baths" data-row="19" data-col="2">
+                <input type="number" id="comp3_half_baths" name="comp3_half_baths" data-row="19" data-col="3">
+            </div>
+
+            <!-- GLA -->
+            <div class="row">
+                <label>GLA</label>
+                <input type="number" id="subject_gla" name="subject_gla" required data-row="20" data-col="0">
+                <input type="number" id="comp1_gla" name="comp1_gla" required data-row="20" data-col="1">
+                <input type="number" id="comp2_gla" name="comp2_gla" required data-row="20" data-col="2">
+                <input type="number" id="comp3_gla" name="comp3_gla" required data-row="20" data-col="3">
+            </div>
+
+            <!-- Basement -->
+            <div class="row">
+                <label>Basement</label>
+                <select id="subject_basement" name="subject_basement" required data-row="21" data-col="0"></select>
+                <select id="comp1_basement" name="comp1_basement" required data-row="21" data-col="1"></select>
+                <select id="comp2_basement" name="comp2_basement" required data-row="21" data-col="2"></select>
+                <select id="comp3_basement" name="comp3_basement" required data-row="21" data-col="3"></select>
+            </div>
+
+            <!-- Garage -->
+            <div class="row">
+                <label>Garage</label>
+                <select id="subject_garage" name="subject_garage" required data-row="22" data-col="0"></select>
+                <select id="comp1_garage" name="comp1_garage" required data-row="22" data-col="1"></select>
+                <select id="comp2_garage" name="comp2_garage" required data-row="22" data-col="2"></select>
+                <select id="comp3_garage" name="comp3_garage" required data-row="22" data-col="3"></select>
+            </div>
+
+            <!-- Other 1 -->
+            <div class="row">
+                <label>Other 1</label>
+                <input type="text" id="subject_other1" name="subject_other1" data-row="23" data-col="0">
+                <input type="text" id="comp1_other1" name="comp1_other1" data-row="23" data-col="1">
+                <input type="text" id="comp2_other1" name="comp2_other1" data-row="23" data-col="2">
+                <input type="text" id="comp3_other1" name="comp3_other1" data-row="23" data-col="3">
+            </div>
+
+            <!-- Other 2 -->
+            <div class="row">
+                <label>Other 2</label>
+                <input type="text" id="subject_other2" name="subject_other2" data-row="24" data-col="0">
+                <input type="text" id="comp1_other2" name="comp1_other2" data-row="24" data-col="1">
+                <input type="text" id="comp2_other2" name="comp2_other2" data-row="24" data-col="2">
+                <input type="text" id="comp3_other2" name="comp3_other2" data-row="24" data-col="3">
+            </div>
+
+            <!-- Other 3 -->
+            <div class="row">
+                <label>Other 3</label>
+                <input type="text" id="subject_other3" name="subject_other3" data-row="25" data-col="0">
+                <input type="text" id="comp1_other3" name="comp1_other3" data-row="25" data-col="1">
+                <input type="text" id="comp2_other3" name="comp2_other3" data-row="25" data-col="2">
+                <input type="text" id="comp3_other3" name="comp3_other3" data-row="25" data-col="3">
+            </div>
+
+            <!-- Net Adjustment -->
+            <div class="row">
+                <label>Net Adjustment (+/-)</label>
+                <div> </div>
+                <input type="number" id="comp1_net_adjustment" name="comp1_net_adjustment" data-row="26" data-col="1">
+                <input type="number" id="comp2_net_adjustment" name="comp2_net_adjustment" data-row="26" data-col="2">
+                <input type="number" id="comp3_net_adjustment" name="comp3_net_adjustment" data-row="26" data-col="3">
+            </div>
+
+            <!-- Adjusted Sale Price -->
+            <div class="row">
+                <label>Adjusted Sale Price</label>
+                <div> </div>
+                <input type="number" id="comp1_adjusted_sale_price" name="comp1_adjusted_sale_price" readonly data-row="27" data-col="1">
+                <input type="number" id="comp2_adjusted_sale_price" name="comp2_adjusted_sale_price" readonly data-row="27" data-col="2">
+                <input type="number" id="comp3_adjusted_sale_price" name="comp3_adjusted_sale_price" readonly data-row="27" data-col="3">
+            </div>
+        </div>
+
+        <!-- Additional Comments -->
+        <div class="form-grid full-width">
+            <div class="form-field">
+                <label for="additional_comments">Additional Comments:</label>
+                <textarea id="additional_comments" name="additional_comments" rows="4">{{ additional_comments }}</textarea>
+            </div>
+        </div>
+
+        <!-- Submit Button Inside the Form -->
+        <div class="button-row">
+            <button type="submit" class="next-button">Save and Continue</button>
+        </div>
+    </form>
+</div>
+
+<!-- Leaflet JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/step2-map.js') }}"></script>
+
+<script>
+    document.addEventListener('keydown', function(e) {
+        const activeEl = document.activeElement;
+        const inCompsGrid = activeEl && activeEl.closest('#comps-grid');
+
+        if (!inCompsGrid) return; // Only apply custom logic inside #comps-grid to not interfere with other fields
+
+        const row = parseInt(activeEl.getAttribute('data-row'), 10);
+        const col = parseInt(activeEl.getAttribute('data-col'), 10);
+
+        if (isNaN(row) || isNaN(col)) return;
+
+        // Sets max rows and columns
+        const maxRow = 27; 
+        const maxCol = 3;  // 0 through 3 = 4 columns
+
+        let newRow = row;
+        let newCol = col;
+
+        // Utilizes Tab, Enter, Shift keys for navigation
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (e.shiftKey) {
+                // Shift+Enter: Move up
+                newRow = row > 0 ? row - 1 : row;
+            } else {
+                // Enter: Move down
+                newRow = row < maxRow ? row + 1 : row;
+            }
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            if (e.shiftKey) {
+                // Shift+Tab: Move left
+                newCol = col > 0 ? col - 1 : col;
+            } else {
+                // Tab: Move right
+                newCol = col < maxCol ? col + 1 : col;
+            }
+        } else {
+            // Not Enter or Tab, do nothing special
+            return;
+        }
+
+        const nextField = document.querySelector(`#comps-grid [data-row="${newRow}"][data-col="${newCol}"]`);
+        if (nextField) {
+            nextField.focus();
+        }
+    });
+</script>
+
+<!-- Combined JavaScript Files -->
+<script src="{{ url_for('static', filename='js/combined-js.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dropdown.js') }}"></script>
+{% endblock %}

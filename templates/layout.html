@@ -1,0 +1,56 @@
+<!-- 
+This template serves as the base layout for the application. 
+It includes a header with navigation, a main content area, and a footer. 
+Key scripts and styles for functionality like Google Maps, Leaflet, and form validation are included. 
+
+To-Do:
+- Review and consolidate JavaScript files to eliminate redundancy and improve maintainability.
+-->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+</head>
+<body>
+    <header>
+        <h1>Valuator Tool</h1>
+        <nav>
+            <div class="dropdown">
+                <button class="dropdown-toggle">Menu</button>
+                <ul class="dropdown-menu">
+                    {% if session.get('user_id') %}
+                        <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('index') }}">Login</a></li>
+                        <li><a href="{{ url_for('register') }}">Register</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main class="page-wrapper">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>Product support or assistance logging in, please contact your admin or customer care... if you can find them!</p>
+        <p>CS50 Final Project &copy; 2024 Carrie Snow</p>
+    </footer>
+
+    <!-- Scripts loaded after DOM -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5AOrudYl6jVW3gGRCc1i4aKdLj0JyA28&libraries=places&callback=initAutocomplete" async defer></script>
+    <script src="{{ url_for('static', filename='js/site.js') }}"></script>   <!-- Your base site.js script -->
+    <script src="{{ url_for('static', filename='js/states.js') }}"></script> <!-- States script -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> <!-- Leaflet script -->
+    <script src="{{ url_for('static', filename='js/findAddress.js') }}"></script> <!-- Address autocomplete script -->
+    <script src="{{ url_for('static', filename='js/formValidation.js') }}"></script> <!-- Form validation script -->
+</body>
+</html>

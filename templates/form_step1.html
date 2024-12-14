@@ -1,0 +1,178 @@
+<!-- 
+This template represents Step 1 of the Property Valuation Form for collecting property details, 
+including address, file number, and property type. It integrates Google Maps Autocomplete API 
+to enhance user convenience and includes dynamic validation to prevent duplicate file numbers. 
+
+Features:
+1. Dynamic address population using Google's Places API.
+2. File number uniqueness validation through an asynchronous server-side check.
+3. State selection dropdown dynamically populated from the backend.
+4. Responsive grid layout for a clean and user-friendly interface.
+5. Client-side validation to ensure required fields are completed.
+
+TODOs:
+- Enhance error feedback to replace alert popups with styled form messages.
+- Verify the compatibility of Autocomplete functionality with other scripts.
+- Consolidate JavaScript files for better maintainability and organization.
+
+This form is a critical step in the valuation process, ensuring accurate data collection while
+providing a streamlined and responsive user experience.
+-->
+
+
+{% extends "layout.html" %}
+
+{% block title %}Valuation Form: Step 1{% endblock %}
+
+{% block content %}
+<h2 class="form-title">Property Valuation Form: Step 1</h2>
+
+<!-- Display error message if it exists -->
+{% if error_message %}
+    <div class="error-message">
+        <p>{{ error_message }}</p>
+    </div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('form_step1') }}" id="valuation-form-step1" onsubmit="return handleFormSubmission(event)">
+    <div class="form-grid">
+        <div class="form-field full-width">
+            <label for="autocomplete">Enter Address:</label>
+            <input
+                type="text"
+                id="autocomplete"
+                name="autocomplete"
+                required
+                onfocus="initAutocomplete()">
+        </div>
+    </div>
+
+    <div class="form-grid">
+        <div class="form-field">
+            <label for="address">Address:</label>
+            <input
+                type="text"
+                id="address"
+                name="address"
+                value="{{ address }}"
+                required>
+        </div>
+        <div class="form-field">
+            <label for="unit">Unit:</label>
+            <input
+                type="text"
+                id="unit"
+                name="unit"
+                maxlength="5">
+        </div>
+        <div class="form-field">
+            <label for="city">City:</label>
+            <input
+                type="text"
+                id="city"
+                name="city"
+                value="{{ city }}"
+                required>
+        </div>
+        <div class="form-field">
+            <label for="state">State:</label>
+            <select id="state" name="state" required>
+                <option value="">Select State</option>
+                {% for state_code in states %}
+                <option value="{{ state_code }}" {% if state_code == state %}selected{% endif %}>{{ state_code }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="zip">ZIP Code:</label>
+            <input
+                type="text"
+                id="zip"
+                name="zip"
+                maxlength="5"
+                pattern="\d{5}"
+                value="{{ zip }}"
+                required>
+        </div>
+    </div>
+
+    <div class="form-grid">
+        <div class="form-field">
+            <label for="file_number">File Number:</label>
+            <input
+                type="text"
+                id="file_number"
+                name="file_number"
+                value="{{ file_number }}"
+                required>
+        </div>
+        <div class="form-field">
+            <label for="borrower_name">Borrower Name:</label>
+            <input
+                type="text"
+                id="borrower_name"
+                name="borrower_name"
+                value="{{ borrower_name }}"
+                required>
+        </div>
+        <div class="form-field">
+            <label for="property_type">Property Type:</label>
+            <select id="property_type" name="property_type" required>
+                <option value="">Select Property Type</option>
+                <option value="Single Family">Single Family</option>
+                <option value="Multi 2-4 Family">Multi 2-4 Family</option>
+                <option value="Condo">Condo</option>
+                <option value="Townhouse">Townhouse</option>
+                <option value="Manufactured">Manufactured</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="button-row">
+        <button type="submit" class="next-button">Next Step</button>
+    </div>
+</form>
+
+<!-- Google Maps script API key and callback -->
+<script 
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5AOrudYl6jVW3gGRCc1i4aKdLj0JyA28&libraries=places&callback=initAutocomplete"
+    async defer>
+</script>
+
+<!-- Link to findAddress.js script that handles address population -->
+<script src="../static/js/findAddress.js"></script>
+
+<!-- JavaScript to handle form validation and file number check -->
+<script>
+    function handleFormSubmission(event) {
+        event.preventDefault(); // Prevent the form from being submitted immediately
+
+        // Get the file_number entered by the user
+        const fileNumber = document.getElementById("file_number").value;
+
+        // Fetch the file_number from the server to check if it already exists
+ fetch('/check_file_number', {
+    method: 'POST',
+    body: JSON.stringify({ file_number: fileNumber }),
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                // If file_number exists, alert the user
+                alert(`File number ${fileNumber} already exists. Please enter a unique file number.`);
+            } else {
+                // If file_number doesn't exist, submit the form
+                event.target.submit();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking file number:', error);
+            alert('There was an error. Please try again.');
+        });
+    }
+</script>
+
+{% endblock %}

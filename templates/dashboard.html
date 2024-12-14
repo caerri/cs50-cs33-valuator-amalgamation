@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h2>Welcome! You are logged in.</h2>
+<p>Select an app to get started:</p>
+<ul>
+    <li><a href="{{ url_for('form_step1') }}">Start Property Valuation Form</a></li>
+</ul>
+{% endblock %}

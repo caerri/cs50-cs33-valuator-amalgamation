@@ -1,0 +1,140 @@
+/* Reset styles for print */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Ensure proper font and background for print */
+body {
+    font-family: Arial, sans-serif;
+    background: #fff;
+    color: #000;
+}
+
+/* Remove unnecessary elements or styles for printing */
+#map-container, #map, script {
+    display: none !important;
+}
+
+/* General layout for printing */
+.step2-form-container {
+    width: 100%;
+    margin: 0 auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    font-size: 12px;
+}
+
+/* Grid layout for the form fields */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Two-column layout for print */
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.form-field input, .form-field select, .form-field textarea {
+    border: 1px solid #000;
+    padding: 5px;
+    font-size: 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Table layout for comparables */
+.comps-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.comps-grid .row {
+    display: flex;
+    border-bottom: 1px solid #000;
+}
+
+.comps-grid .row:last-child {
+    border-bottom: none;
+}
+
+.comps-grid .column-header, 
+.comps-grid input, 
+.comps-grid select {
+    flex: 1;
+    padding: 5px;
+    border: 1px solid #000;
+    text-align: left;
+    font-size: 12px;
+}
+
+.comps-grid input,
+.comps-grid select {
+    padding: 3px;
+    text-align: left;
+}
+
+/* Adjusted layout for header and titles */
+.form-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+h3 {
+    font-size: 16px;
+    margin: 10px 0;
+}
+
+/* Handle long content overflow in print */
+textarea, input[type="text"] {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Force proper column alignment for comps */
+.comps-grid .row > input,
+.comps-grid .row > select {
+    flex: 1;
+    text-align: left;
+}
+
+/* Additional comments */
+textarea {
+    width: 100%;
+    height: 50px;
+    resize: none;
+}
+
+/* Remove unnecessary margins */
+.button-row {
+    display: none;
+}
+
+/* Printing styles for A4-sized paper */
+@page {
+    size: A4;
+    margin: 20mm;
+}
+
+@media print {
+    .form-title, h3 {
+        text-align: center;
+    }
+    .form-grid {
+        grid-template-columns: repeat(3, 1fr); /* Use more columns if needed for print */
+        gap: 5px;
+    }
+}
