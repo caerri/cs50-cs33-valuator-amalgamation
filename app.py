@@ -2,26 +2,42 @@ import sqlite3
 from flask import Flask, request, redirect, url_for, render_template, session, jsonify
 from auth import register_user, validate_user  # from auth.py
 import requests  # Intended to support ATTOM API integration on future deployment.
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # Load environment variables from .env
+
+GOOGLE_GEOCODING_API_KEY = os.getenv('GOOGLE_GEOCODING_API_KEY')
+print("Loaded API Key: ", GOOGLE_GEOCODING_API_KEY)  # Debugging statement
 
 app = Flask(__name__)
 app.secret_key = 'test'  # Change this to a more secure key in production
 
-def init_db():
+def init_users_db():
     try:
-        print("Initializing the database...")  # Debugging message
-
-        conn = sqlite3.connect('valuator.db')
+        conn = sqlite3.connect('users.db')  # Connect to users.db
         cursor = conn.cursor()
-
-        # Users table for login authentication
+        # Users table for login authentication, separated in order not to have to clear users when valuator data is cleared.
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE,
-                password TEXT
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL
             )
         ''')
-        print("Users table created (or already exists)")  # Debugging message
+        print("Users table created (or already exists).")  
+        conn.commit()
+    except Exception as e:
+        print(f"Error occurred while initializing the users database: {e}") 
+    finally:
+        conn.close()  
+
+def init_db():
+    try:
+        print("Initializing the database...")  
+
+        conn = sqlite3.connect('valuator.db')
+        cursor = conn.cursor()
 
         # Create form1 table for first step data
         cursor.execute('''
@@ -32,6 +48,8 @@ def init_db():
                 city TEXT,
                 state TEXT,
                 zip TEXT,
+                latitude REAL,
+                longitude REAL,
                 property_type TEXT,
                 borrower_name TEXT,
                 file_number TEXT UNIQUE,
@@ -50,6 +68,8 @@ def init_db():
                 subject_city TEXT,
                 subject_state TEXT,
                 subject_zip TEXT,
+                subject_latitude REAL,
+                subject_longitude REAL,
                 subject_county TEXT,
                 subject_parcel_number TEXT,
                 subject_data_source TEXT,
@@ -185,6 +205,10 @@ def register():
         return redirect(url_for('index'))
     return render_template('register.html')
 
+@app.context_processor
+def inject_api_key():
+    return {'GOOGLE_GEOCODING_API_KEY': os.getenv('GOOGLE_GEOCODING_API_KEY')} 
+
 # Dashboard is intended as a landing page for future application features.
 @app.route('/dashboard')
 def dashboard():
@@ -214,6 +238,35 @@ def check_file_number():
 
     return jsonify({'exists': bool(existing_entry)})
 
+@app.route('/get-lat-lng', methods=['POST'])
+def get_lat_lng():
+    try:
+        data = request.get_json()
+        address = data.get('address', '')
+
+        if not address:
+            print("Error: Address missing from request.")
+            return jsonify({'error': 'Address is required'}), 400
+
+        print(f"Fetching coordinates for: {address}")
+
+        url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={GOOGLE_GEOCODING_API_KEY}"
+        response = requests.get(url)
+        geocode_data = response.json()
+
+        print("Geocoding API Response:", geocode_data)
+
+        if geocode_data['status'] == 'OK':
+            location = geocode_data['results'][0]['geometry']['location']
+            return jsonify({'latitude': location['lat'], 'longitude': location['lng']})
+        else:
+            print(f"Error from Google API: {geocode_data.get('status', 'Unknown error')}")
+            return jsonify({'error': geocode_data.get('status', 'Unknown error')}), 500
+    except Exception as e:
+        print(f"Server Error in /get-lat-lng: {e}")
+        print(f"Address received for geocoding: {address}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
 # Form Step 1 is intended to collect data for the first step of the form. Functioning as intended. 
 # TODO: Future functionality could include API integration to populate certain data from employer internal source. 
 @app.route('/form-step1', methods=['GET', 'POST'])
@@ -221,41 +274,48 @@ def form_step1():
     if not session.get('user_id'):
         return redirect(url_for('index'))
 
-    # Potential future API integration to populate form data from internal sources. These are currently manual as the source is secure and not available for this project.
     if request.method == 'POST':
-        address = request.form.get('address')  # Future internal source API integration could populate this field.
-        unit = request.form.get('unit')  # Future internal source API integration could populate this field.
-        city = request.form.get('city')  # Future internal source API integration could populate this field.
-        state = request.form.get('state')  # Future internal source API integration could populate this field.
-        zip_code = request.form.get('zip')  # Future internal source API integration could populate this field.
-        property_type = request.form.get('property_type')  # Future internal source API integration could populate this field.
-        borrower_name = request.form.get('borrower_name')  # Future internal source API integration could populate this field.
-        file_number = request.form.get('file_number')  # Future internal source API integration could populate this field.
+        # Debugging: Print all received form data
+        print("Form Data Received:", request.form.to_dict())
 
-        # Check if the file_number already exists in the database
+        address = request.form.get('address')
+        unit = request.form.get('unit')
+        city = request.form.get('city')
+        state = request.form.get('state')
+        zip_code = request.form.get('zip')
+        latitude = request.form.get('latitude')
+        longitude = request.form.get('longitude')
+        property_type = request.form.get('property_type')
+        borrower_name = request.form.get('borrower_name')
+        file_number = request.form.get('file_number')
+
+        # Debugging: Check if latitude and longitude are received
+        print(f"Latitude: {latitude}, Longitude: {longitude}")
+
+        # Check if file number already exists
         conn = sqlite3.connect('valuator.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM form1 WHERE file_number = ?', (file_number,))
+        cursor.execute('SELECT file_number FROM form1 WHERE file_number = ?', (file_number,))
         existing_entry = cursor.fetchone()
 
         if existing_entry:
-            # If file_number exists, display error message
             error_message = f"File number {file_number} already exists. Please enter a unique file number."
             return render_template('form_step1.html', error_message=error_message)
 
-        # If file_number does not exist, save the form data
-        cursor.execute('''
-            INSERT INTO form1 (address, unit, city, state, zip, property_type, borrower_name, file_number)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (address, unit, city, state, zip_code, property_type, borrower_name, file_number))
+        # Debugging: Confirm data being inserted into the DB
+        print("Inserting into DB:", address, unit, city, state, zip_code, latitude, longitude, property_type, borrower_name, file_number)
 
+        # Insert into DB
+        cursor.execute('''
+            INSERT INTO form1 (address, unit, city, state, zip, latitude, longitude, property_type, borrower_name, file_number)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (address, unit, city, state, zip_code, latitude, longitude, property_type, borrower_name, file_number))
         conn.commit()
         conn.close()
 
-        # Redirect to form_step2 with the file_number
         return redirect(url_for('form_step2', file_number=file_number))
 
-    return render_template('form_step1.html')  # Render Form Step 1 for GET requests
+    return render_template('form_step1.html', api_key=os.getenv('GOOGLE_GEOCODING_API_KEY'))
 
 # Form Step 2: Functional but lacking additional features to enhance UX. 
 # TODO:
@@ -287,10 +347,12 @@ def form_step2(file_number):
         'city': existing_entry[3],
         'state': existing_entry[4],
         'zip': existing_entry[5],
-        'borrower_name': existing_entry[7],
-        'property_type': existing_entry[6],
-        'county': existing_entry[9] if len(existing_entry) > 9 else "",
-        'parcel_number': existing_entry[10] if len(existing_entry) > 10 else ""
+        'latitude': existing_entry[6], 
+        'longitude': existing_entry[7],
+        'borrower_name': existing_entry[8],
+        'property_type': existing_entry[9],
+        'county': existing_entry[10] if len(existing_entry) > 9 else "",
+        'parcel_number': existing_entry[11] if len(existing_entry) > 10 else ""
     }
 
     if request.method == 'POST':
@@ -463,3 +525,5 @@ if __name__ == "__main__":
     # Initialize the DB before running the server
     with app.app_context():
         init_db()
+        init_users_db()
+    app.run(debug=True)

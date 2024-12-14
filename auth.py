@@ -4,7 +4,7 @@ import sqlite3
 def register_user(username, password):
     # Register a new user with the given username and password
     hashed_password = generate_password_hash(password, method='pbkdf2:sha256') # Used recommended method
-    conn = sqlite3.connect('valuator.db')
+    conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     try:
         cursor.execute('''
@@ -20,7 +20,7 @@ def register_user(username, password):
 
 def validate_user(username, password):
     """Validate the user’s credentials, return user_id if valid"""
-    conn = sqlite3.connect('valuator.db')
+    conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     cursor.execute('SELECT id, password FROM users WHERE username = ?', (username,))
     user = cursor.fetchone()

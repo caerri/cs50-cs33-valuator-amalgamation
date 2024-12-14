@@ -42,8 +42,13 @@ providing a streamlined and responsive user experience.
                 type="text"
                 id="autocomplete"
                 name="autocomplete"
-                required
-                onfocus="initAutocomplete()">
+                placeholder="Start typing address..."
+                required>
+        </div>
+
+        <div>
+            <input type="hidden" id="latitude" name="latitude">
+            <input type="hidden" id="longitude" name="longitude">
         </div>
     </div>
 
@@ -92,6 +97,7 @@ providing a streamlined and responsive user experience.
                 maxlength="5"
                 pattern="\d{5}"
                 value="{{ zip }}"
+                onchange="fetchLatLng()" 
                 required>
         </div>
     </div>
@@ -127,20 +133,10 @@ providing a streamlined and responsive user experience.
             </select>
         </div>
     </div>
-
     <div class="button-row">
         <button type="submit" class="next-button">Next Step</button>
     </div>
 </form>
-
-<!-- Google Maps script API key and callback -->
-<script 
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5AOrudYl6jVW3gGRCc1i4aKdLj0JyA28&libraries=places&callback=initAutocomplete"
-    async defer>
-</script>
-
-<!-- Link to findAddress.js script that handles address population -->
-<script src="../static/js/findAddress.js"></script>
 
 <!-- JavaScript to handle form validation and file number check -->
 <script>

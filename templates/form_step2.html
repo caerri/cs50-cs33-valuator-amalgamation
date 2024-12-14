@@ -35,9 +35,7 @@ Comments:
 
 {% block content %}
 <!-- TODO: For PDF <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}" media="print"> -->
-<div id="property_type_data" data-property-type="{{ property_type }}"></div>
-<div id="property_type_data_coordinates" 
-    data-property-type="{{ property_type }}" 
+<div id="property_coordinates" 
     data-latitude="{{ latitude }}" 
     data-longitude="{{ longitude }}"></div>
 <h2 class="form-title">Property Valuation Form: Step 2</h2>

@@ -30,123 +30,184 @@
 
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Initialize the map, default to the center of the US if no coordinates are passed
-  var map = L.map('map').setView([39.8283, -98.5795], 4);  // Default center (USA)
+    // Function to fetch latitude and longitude
+    function fetchLatLng() {
+        const addressField = document.getElementById('autocomplete');
+        const latField = document.getElementById('latitude');
+        const lngField = document.getElementById('longitude');
+    
+        if (!addressField || !latField || !lngField) {
+            console.error('One or more fields are missing');
+            return;
+        }
+    
+        console.log('Fetching coordinates for manual input address:', addressField.value);
+    
+        fetch('/get-lat-lng', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: addressField.value }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.latitude && data.longitude) {
+                    latField.value = data.latitude;
+                    lngField.value = data.longitude;
+                    console.log('Lat/Lng fetched for manual input:', data);
+                } else {
+                    console.error('Failed to fetch coordinates:', data.error);
+                }
+            })
+            .catch(error => console.error('Error fetching Lat/Lng:', error));
+    }
 
-  // Add OpenStreetMap tiles
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-  }).addTo(map);
+    // Initialize Google Maps Autocomplete
+    function initAutocomplete() {
+        const autocomplete = new google.maps.places.Autocomplete(
+            document.getElementById('autocomplete'),
+            { types: ['geocode'] }
+        );
+    
+        autocomplete.addListener('place_changed', function () {
+            const place = autocomplete.getPlace();
+            if (!place.geometry) {
+                console.error('No geometry available for the selected place.');
+                return;
+            }
+    
+            // Populate hidden fields
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lng;
+    
+            console.log('Lat/Lng updated via Google Autocomplete:', { lat, lng });
+        });
+    }
 
-  // Layer for markers
-  var markersLayer = L.layerGroup().addTo(map);
+    // Attach change listener to fetch lat/lng for manual address entry
+    const addressField = document.getElementById('autocomplete');
+    if (addressField) {
+        addressField.addEventListener('change', fetchLatLng);
+    }
 
-  // Function to geocode addresses and add markers
-  function geocodeAndAddMarkers() {
-      // Clear existing markers
-      markersLayer.clearLayers();
+    // Initialize Leaflet Map
+    const latitude = parseFloat(document.getElementById('property_coordinates')?.getAttribute('data-latitude')) || 39.8283;
+    const longitude = parseFloat(document.getElementById('property_coordinates')?.getAttribute('data-longitude')) || -98.5795;
 
-      var addresses = [
-          {
-              label: 'Subject',
-              address: document.getElementById('subject_address').value,
-              city: document.getElementById('subject_city').value,
-              state: document.getElementById('subject_state').value,
-              zip: document.getElementById('subject_zip').value,
-          },
-          {
-              label: 'Comp 1',
-              address: document.getElementById('comp1_address').value,
-              city: document.getElementById('comp1_city').value,
-              state: document.getElementById('comp1_state').value,
-              zip: document.getElementById('comp1_zip').value,
-          },
-          {
-              label: 'Comp 2',
-              address: document.getElementById('comp2_address').value,
-              city: document.getElementById('comp2_city').value,
-              state: document.getElementById('comp2_state').value,
-              zip: document.getElementById('comp2_zip').value,
-          },
-          {
-              label: 'Comp 3',
-              address: document.getElementById('comp3_address').value,
-              city: document.getElementById('comp3_city').value,
-              state: document.getElementById('comp3_state').value,
-              zip: document.getElementById('comp3_zip').value,
-          },
-      ];
+    const map = L.map('map').setView([latitude, longitude], 10);
 
-      addresses.forEach(function (item) {
-          // Check if address fields are not empty
-          if (item.address && item.city && item.state && item.zip) {
-              var fullAddress = `${item.address}, ${item.city}, ${item.state} ${item.zip}`;
-              geocodeAddress(fullAddress, function (latlng) {
-                  if (latlng) {
-                      var marker = L.marker(latlng).addTo(markersLayer);
-                      marker.bindPopup(`<b>${item.label}</b><br>${fullAddress}`);
-                  }
-              });
-          } else {
-              console.warn('Incomplete address for:', item.label);
-          }
-      });
-  }
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+    }).addTo(map);
 
-  // Geocode function using Nominatim API
-  function geocodeAddress(address, callback) {
-      var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=3&q=' + encodeURIComponent(address);
+    // Layer for markers
+    var markersLayer = L.layerGroup().addTo(map);
 
-      fetch(url)
-          .then((response) => response.json())
-          .then((data) => {
-              if (data && data.length > 0) {
-                  var lat = data[0].lat;
-                  var lon = data[0].lon;
-                  callback([lat, lon]);
-              } else {
-                  console.error('Address not found: ' + address);
-                  callback(null);
-              }
-          })
-          .catch((error) => {
-              console.error('Error fetching geocode data:', error);
-              callback(null);
-          });
-  }
+    // Function to geocode addresses and add markers
+    function geocodeAndAddMarkers() {
+        // Clear existing markers
+        markersLayer.clearLayers();
 
-  // Add event listeners to update map when addresses change
-  ['subject', 'comp1', 'comp2', 'comp3'].forEach(function (prefix) {
-      ['address', 'city', 'state', 'zip'].forEach(function (field) {
-          var input = document.getElementById(prefix + '_' + field);
-          if (input) {
-              input.addEventListener('change', function () {
-                  geocodeAndAddMarkers();
-              });
-          }
-      });
-  });
+        var addresses = [
+            {
+                label: 'Subject',
+                address: document.getElementById('subject_address').value,
+                city: document.getElementById('subject_city').value,
+                state: document.getElementById('subject_state').value,
+                zip: document.getElementById('subject_zip').value,
+            },
+            {
+                label: 'Comp 1',
+                address: document.getElementById('comp1_address').value,
+                city: document.getElementById('comp1_city').value,
+                state: document.getElementById('comp1_state').value,
+                zip: document.getElementById('comp1_zip').value,
+            },
+            {
+                label: 'Comp 2',
+                address: document.getElementById('comp2_address').value,
+                city: document.getElementById('comp2_city').value,
+                state: document.getElementById('comp2_state').value,
+                zip: document.getElementById('comp2_zip').value,
+            },
+            {
+                label: 'Comp 3',
+                address: document.getElementById('comp3_address').value,
+                city: document.getElementById('comp3_city').value,
+                state: document.getElementById('comp3_state').value,
+                zip: document.getElementById('comp3_zip').value,
+            },
+        ];
 
-  // Get latitude and longitude from Flask's data attributes
-  const latitude = parseFloat(document.getElementById('property_type_data').getAttribute('data-latitude'));
-  const longitude = parseFloat(document.getElementById('property_type_data').getAttribute('data-longitude'));
+        addresses.forEach(function (item) {
+            // Check if address fields are not empty
+            if (item.address && item.city && item.state && item.zip) {
+                var fullAddress = `${item.address}, ${item.city}, ${item.state} ${item.zip}`;
+                geocodeAddress(fullAddress, function (latlng) {
+                    if (latlng) {
+                        var marker = L.marker(latlng).addTo(markersLayer);
+                        marker.bindPopup(`<b>${item.label}</b><br>${fullAddress}`);
+                    }
+                });
+            } else {
+                console.warn('Incomplete address for:', item.label);
+            }
+        });
+    }
 
-  // If valid latitude and longitude, center the map on those coordinates
-  if (latitude && longitude) {
-      map.setView([latitude, longitude], 14);  // Zoom in closer to the location
-      var marker = L.marker([latitude, longitude]).addTo(markersLayer);
-      marker.bindPopup(`<b>Subject Property</b><br>${latitude}, ${longitude}`).openPopup();
-  } else {
-      console.error("Invalid latitude/longitude data");
-  }
+    // Geocode function using Nominatim API
+    function geocodeAddress(address, callback) {
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=3&q=' + encodeURIComponent(address);
 
-  // Initial call to populate map if addresses are pre-filled
-  geocodeAndAddMarkers();
+        fetch(url)
+            .then((response) => response.json())
+            .then((data) => {
+                if (data && data.length > 0) {
+                    var lat = data[0].lat;
+                    var lon = data[0].lon;
+                    callback([lat, lon]);
+                } else {
+                    console.error('Address not found: ' + address);
+                    callback(null);
+                }
+            })
+            .catch((error) => {
+                console.error('Error fetching geocode data:', error);
+                callback(null);
+            });
+    }
+
+    // Add event listeners to update map when addresses change
+    ['subject', 'comp1', 'comp2', 'comp3'].forEach(function (prefix) {
+        ['address', 'city', 'state', 'zip'].forEach(function (field) {
+            var input = document.getElementById(prefix + '_' + field);
+            if (input) {
+                input.addEventListener('change', function () {
+                    geocodeAndAddMarkers();
+                });
+            }
+        });
+    });
+
+    // If valid latitude and longitude, center the map on those coordinates
+    if (latitude && longitude) {
+        map.setView([latitude, longitude], 14);  // Zoom in closer to the location
+        var marker = L.marker([latitude, longitude]).addTo(markersLayer);
+        marker.bindPopup(`<b>Subject Property</b><br>${latitude}, ${longitude}`).openPopup();
+    } else {
+        console.error("Invalid latitude/longitude data");
+    }
+
+    // Initial call to populate map if addresses are pre-filled
+    geocodeAndAddMarkers();
 });
 
 
-// // Load issues 
-//     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5AOrudYl6jVW3gGRCc1i4aKdLj0JyA28&libraries=places&callback=initAutocomplete" async defer></script>
+// // Load issues // The listener problem is coming from not catching the input automatically updated from Google.
+// ************* ^ TODO *************
+//     <script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_GEOCODING_API_KEY }}&libraries=places&callback=initAutocomplete" async defer></script>
 
 //     <script>
 //         let autocomplete1, autocomplete2, autocomplete3;
@@ -158,8 +219,8 @@ document.addEventListener('DOMContentLoaded', function () {
 //             autocomplete2 = new google.maps.places.Autocomplete(
 //                 document.getElementById('comp2_address'), { types: ['geocode'] });
 //             autocomplete3 = new google.maps.places.Autocomplete(
-//                 document.getElementById('comp3_address'), { types: ['geocode'] });
-    
+//                 document.getElementById('comp3_address'), { types: ['geocode'] }); j
+
 //             // Add event listeners to handle the place change for comparables
 //             autocomplete1.addListener('place_changed', function() {
 //                 fillInAddress(autocomplete1, 'comp1');
@@ -209,71 +270,67 @@ document.addEventListener('DOMContentLoaded', function () {
 //         }
 //     </script> -->    
 
-<script>
-    // Function to calculate the DOM (Days on Market)
-    function calculateDOM(listDateId, saleDateId, outputId) {
-        const listDateValue = document.getElementById(listDateId).value;
-        const saleDateValue = document.getElementById(saleDateId).value;
+// Function to calculate the DOM (Days on Market)
+function calculateDOM(listDateId, saleDateId, outputId) {
+    const listDateValue = document.getElementById(listDateId).value;
+    const saleDateValue = document.getElementById(saleDateId).value;
 
-        if (listDateValue && saleDateValue) {
-            const listDate = new Date(listDateValue);
-            const saleDate = new Date(saleDateValue);
+    if (listDateValue && saleDateValue) {
+        const listDate = new Date(listDateValue);
+        const saleDate = new Date(saleDateValue);
 
-            if (!isNaN(listDate) && !isNaN(saleDate)) {
-                const timeDiff = saleDate - listDate; // Difference in milliseconds
-                const daysOnMarket = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)); // Convert to days
+        if (!isNaN(listDate) && !isNaN(saleDate)) {
+            const timeDiff = saleDate - listDate; // Difference in milliseconds
+            const daysOnMarket = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)); // Convert to days
 
-                document.getElementById(outputId).value = daysOnMarket >= 0 ? daysOnMarket : 0;
-                return;
-            }
-        }
-
-        // Clear the DOM field if dates are invalid or missing
-        document.getElementById(outputId).value = "";
-    }
-
-    // Attach event listeners to date fields
-    document.addEventListener('DOMContentLoaded', function () {
-        const comparables = [
-            { listDate: 'comp1_orig_list_date', saleDate: 'comp1_sale_date', output: 'comp1_cdom' },
-            { listDate: 'comp2_orig_list_date', saleDate: 'comp2_sale_date', output: 'comp2_cdom' },
-            { listDate: 'comp3_orig_list_date', saleDate: 'comp3_sale_date', output: 'comp3_cdom' },
-        ];
-
-        comparables.forEach(comp => {
-            const listDateField = document.getElementById(comp.listDate);
-            const saleDateField = document.getElementById(comp.saleDate);
-
-            if (listDateField && saleDateField) {
-                listDateField.addEventListener('change', () => calculateDOM(comp.listDate, comp.saleDate, comp.output));
-                saleDateField.addEventListener('change', () => calculateDOM(comp.listDate, comp.saleDate, comp.output));
-            }
-        });
-    });
-</script>
-
-<script>document.addEventListener('DOMContentLoaded', function () {
-    // Function to convert site size to acreage
-    function convertToAcreage(inputField) {
-        const sqftValue = parseFloat(inputField.value);
-        if (!isNaN(sqftValue)) {
-            if (sqftValue >= 43560) {
-                const acreage = (sqftValue / 43560).toFixed(2); // Convert to acres
-                inputField.value = acreage; // Only store numeric value
-                inputField.setAttribute('data-acres', `${acreage} acres`); // Add display value as data attribute
-            }
-        } else {
-            inputField.value = ""; // Clear field if the input is invalid
+            document.getElementById(outputId).value = daysOnMarket >= 0 ? daysOnMarket : 0;
+            return;
         }
     }
 
-    // Add event listeners to all site size fields
-    const siteSizeFields = document.querySelectorAll('#subject_site_size, #comp1_site_size, #comp2_site_size, #comp3_site_size');
-    siteSizeFields.forEach(function (field) {
-        field.addEventListener('change', function () {
-            convertToAcreage(field);
-        });
+    // Clear the DOM field if dates are invalid or missing
+    document.getElementById(outputId).value = "";
+}
+
+// Attach event listeners to date fields
+document.addEventListener('DOMContentLoaded', function () {
+    const comparables = [
+        { listDate: 'comp1_orig_list_date', saleDate: 'comp1_sale_date', output: 'comp1_cdom' },
+        { listDate: 'comp2_orig_list_date', saleDate: 'comp2_sale_date', output: 'comp2_cdom' },
+        { listDate: 'comp3_orig_list_date', saleDate: 'comp3_sale_date', output: 'comp3_cdom' },
+    ];
+
+    comparables.forEach(comp => {
+        const listDateField = document.getElementById(comp.listDate);
+        const saleDateField = document.getElementById(comp.saleDate);
+
+        if (listDateField && saleDateField) {
+            listDateField.addEventListener('change', () => calculateDOM(comp.listDate, comp.saleDate, comp.output));
+            saleDateField.addEventListener('change', () => calculateDOM(comp.listDate, comp.saleDate, comp.output));
+        }
     });
 });
+    
+document.addEventListener('DOMContentLoaded', function () {
+// Function to convert site size to acreage
+function convertToAcreage(inputField) {
+    const sqftValue = parseFloat(inputField.value);
+    if (!isNaN(sqftValue)) {
+        if (sqftValue >= 43560) {
+            const acreage = (sqftValue / 43560).toFixed(2); // Convert to acres
+            inputField.value = acreage; // Only store numeric value
+            inputField.setAttribute('data-acres', `${acreage} acres`); // Add display value as data attribute
+        }
+    } else {
+        inputField.value = ""; // Clear field if the input is invalid
+    }
+}
 
-</script>
+// Add event listeners to all site size fields
+const siteSizeFields = document.querySelectorAll('#subject_site_size, #comp1_site_size, #comp2_site_size, #comp3_site_size');
+siteSizeFields.forEach(function (field) {
+    field.addEventListener('change', function () {
+        convertToAcreage(field);
+    });
+});
+});

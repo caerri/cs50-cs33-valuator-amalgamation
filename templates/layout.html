@@ -16,6 +16,8 @@ To-Do:
     <title>{% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_GEOCODING_API_KEY }}&libraries=places&callback=initAutocomplete" async defer></script>
+    <script src="/static/js/combined-js.js"></script>
 </head>
 <body>
     <header>
@@ -42,15 +44,12 @@ To-Do:
 
     <footer>
         <p>Product support or assistance logging in, please contact your admin or customer care... if you can find them!</p>
-        <p>CS50 Final Project &copy; 2024 Carrie Snow</p>
+        <p>CSCI12, CS50 Final Project &copy; 2024 Carrie Snow</p>
     </footer>
 
-    <!-- Scripts loaded after DOM -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5AOrudYl6jVW3gGRCc1i4aKdLj0JyA28&libraries=places&callback=initAutocomplete" async defer></script>
     <script src="{{ url_for('static', filename='js/site.js') }}"></script>   <!-- Your base site.js script -->
     <script src="{{ url_for('static', filename='js/states.js') }}"></script> <!-- States script -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> <!-- Leaflet script -->
-    <script src="{{ url_for('static', filename='js/findAddress.js') }}"></script> <!-- Address autocomplete script -->
     <script src="{{ url_for('static', filename='js/formValidation.js') }}"></script> <!-- Form validation script -->
 </body>
 </html>
