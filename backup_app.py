@@ -341,7 +341,7 @@ def form_step2(file_number):
 
     # Pre-populate form with the existing data from form1
     prepopulated_data = {
-        'file_number': existing_entry[10],
+        'file_number': existing_entry[8],  # Assuming file_number is the 9th column (index 8)
         'address': existing_entry[1],
         'unit': existing_entry[2],
         'city': existing_entry[3],
@@ -349,10 +349,10 @@ def form_step2(file_number):
         'zip': existing_entry[5],
         'latitude': existing_entry[6], 
         'longitude': existing_entry[7],
-        'borrower_name': existing_entry[9],
-        'property_type': existing_entry[8],
-        'county': existing_entry[11] if len(existing_entry) > 9 else "",
-        'parcel_number': existing_entry[12] if len(existing_entry) > 10 else ""
+        'borrower_name': existing_entry[8],
+        'property_type': existing_entry[9],
+        'county': existing_entry[10] if len(existing_entry) > 9 else "",
+        'parcel_number': existing_entry[11] if len(existing_entry) > 10 else ""
     }
 
     if request.method == 'POST':

@@ -63,6 +63,7 @@ def init_db():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS subject_value_table (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_number TEXT UNIQUE,
                 subject_address TEXT,
                 subject_unit TEXT,
                 subject_city TEXT,
@@ -85,11 +86,14 @@ def init_db():
                 subject_des_style TEXT,
                 subject_condition TEXT,
                 subject_beds INTEGER,
+                subject_bathrooms REAL, 
+                subject_gla REAL, 
+                subject_year_built INTEGER, 
                 subject_full_baths INTEGER,
                 subject_half_baths INTEGER,
-                subject_gla REAL,
                 subject_basement TEXT,
                 subject_garage TEXT,
+                subject_lot_size REAL,
                 additional_comments TEXT,
                 comp1_address TEXT,
                 comp1_unit TEXT,
@@ -106,12 +110,14 @@ def init_db():
                 comp1_site_size REAL,
                 comp1_location TEXT,
                 comp1_view TEXT,
+                comp1_lot_size REAL,
                 comp1_des_style TEXT,
                 comp1_condition TEXT,
                 comp1_beds INTEGER,
                 comp1_full_baths INTEGER,
                 comp1_half_baths INTEGER,
                 comp1_gla REAL,
+                comp1_year_built INTEGER,
                 comp1_basement TEXT,
                 comp1_garage TEXT,
                 comp2_address TEXT,
@@ -128,13 +134,15 @@ def init_db():
                 comp2_cdom INTEGER,
                 comp2_site_size REAL,
                 comp2_location TEXT,
-                comp2_view TEXT,
+                comp2_view TEXT,  
+                comp2_lot_size REAL,
                 comp2_des_style TEXT,
                 comp2_condition TEXT,
                 comp2_beds INTEGER,
                 comp2_full_baths INTEGER,
                 comp2_half_baths INTEGER,
                 comp2_gla REAL,
+                comp2_year_built INTEGER,
                 comp2_basement TEXT,
                 comp2_garage TEXT,
                 comp3_address TEXT,
@@ -152,12 +160,14 @@ def init_db():
                 comp3_site_size REAL,
                 comp3_location TEXT,
                 comp3_view TEXT,
+                comp3_lot_size REAL,
                 comp3_des_style TEXT,
                 comp3_condition TEXT,
                 comp3_beds INTEGER,
                 comp3_full_baths INTEGER,
                 comp3_half_baths INTEGER,
                 comp3_gla REAL,
+                comp3_year_built INTEGER,
                 comp3_basement TEXT,
                 comp3_garage TEXT
             )
@@ -267,6 +277,98 @@ def get_lat_lng():
         print(f"Address received for geocoding: {address}")
         return jsonify({'error': 'Internal Server Error'}), 500
 
+# Subject data fetch from ATTOM API.
+@app.route('/api/subject-data', methods=['GET'])
+def fetch_subject_data():
+    address = request.args.get('address')
+    city = request.args.get('city')
+    state = request.args.get('state')
+    zip_code = request.args.get('zip')
+
+    if not all([address, city, state, zip_code]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    try:
+        headers = {
+            "Accept": "application/json",
+            "APIKey": os.getenv("ATTOM_API_KEY")
+        }
+        params = {
+            "address1": address,
+            "address2": f"{city}, {state} {zip_code}"
+        }
+
+        response = requests.get(BASE_URL, headers=headers, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            if data["status"]["code"] == 0 and data["status"]["total"] > 0:
+                return jsonify(data["property"][0])  # Return the first property result
+            else:
+                return jsonify({"error": "No data found"}), 404
+        else:
+            return jsonify({"error": f"API Error {response.status_code}: {response.text}"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Comparable data fetch from ATTOM API.
+@app.route('/api/comp-data', methods=['GET'])
+def fetch_comp_data():
+    address = request.args.get('address')
+    city = request.args.get('city')
+    state = request.args.get('state')
+    zip_code = request.args.get('zip')
+
+    if not all([address, city, state, zip_code]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    try:
+        headers = {
+            "Accept": "application/json",
+            "APIKey": os.getenv("ATTOM_API_KEY")
+        }
+        params = {
+            "address1": address,
+            "address2": f"{city}, {state} {zip_code}"
+        }
+
+        response = requests.get(BASE_URL, headers=headers, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            if data["status"]["code"] == 0 and data["status"]["total"] > 0:
+                return jsonify(data["property"][0])  # Return the first property result
+            else:
+                return jsonify({"error": "No data found"}), 404
+        else:
+            return jsonify({"error": f"API Error {response.status_code}: {response.text}"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/fetch-comp/<property_type>/<int:comp_id>', methods=['POST'])
+def fetch_comp(property_type, comp_id):
+    """Fetch comparable data by property type and comparable ID."""
+    data = request.json  # Get JSON payload from the request
+    address = data.get("address")
+    city = data.get("city")
+    state = data.get("state")
+    zip_code = data.get("zip")
+
+    if not all([address, city, state, zip_code]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    try:
+        # Fetch data using the ATTOM API
+        comp_data = fetch_property_data(address, city, state, zip_code)
+        if comp_data:
+            return jsonify({
+                "comp_id": comp_id,
+                "property_type": property_type,
+                "comp_data": comp_data
+            })
+        else:
+            return jsonify({"error": "No data found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # Form Step 1 is intended to collect data for the first step of the form. Functioning as intended. 
 # TODO: Future functionality could include API integration to populate certain data from employer internal source. 
 @app.route('/form-step1', methods=['GET', 'POST'])
@@ -341,7 +443,7 @@ def form_step2(file_number):
 
     # Pre-populate form with the existing data from form1
     prepopulated_data = {
-        'file_number': existing_entry[10],
+        'file_number': existing_entry[8],  # Assuming file_number is the 9th column (index 8)
         'address': existing_entry[1],
         'unit': existing_entry[2],
         'city': existing_entry[3],
@@ -349,10 +451,10 @@ def form_step2(file_number):
         'zip': existing_entry[5],
         'latitude': existing_entry[6], 
         'longitude': existing_entry[7],
-        'borrower_name': existing_entry[9],
-        'property_type': existing_entry[8],
-        'county': existing_entry[11] if len(existing_entry) > 9 else "",
-        'parcel_number': existing_entry[12] if len(existing_entry) > 10 else ""
+        'borrower_name': existing_entry[8],
+        'property_type': existing_entry[9],
+        'county': existing_entry[10] if len(existing_entry) > 9 else "",
+        'parcel_number': existing_entry[11] if len(existing_entry) > 10 else ""
     }
 
     if request.method == 'POST':
@@ -520,6 +622,33 @@ def form_step2(file_number):
         return redirect(url_for('dashboard'))  # Example redirection
 
     return render_template('form_step2.html', **prepopulated_data)  # Render Form Step 2 for GET requests
+
+@app.route('/fetch-comp/<property_type>/<int:comp_id>', methods=['POST'])
+def fetch_comp(property_type, comp_id):
+    """Fetch comparable data by property type and comparable ID."""
+    data = request.json  # Get JSON payload from the request
+    address = data.get("address")
+    city = data.get("city")
+    state = data.get("state")
+    zip_code = data.get("zip")
+
+    if not all([address, city, state, zip_code]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    try:
+        # Fetch data using the ATTOM API
+        comp_data = fetch_property_data(address, city, state, zip_code)
+        if comp_data:
+            return jsonify({
+                "comp_id": comp_id,
+                "property_type": property_type,
+                "comp_data": comp_data
+            })
+        else:
+            return jsonify({"error": "No data found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     # Initialize the DB before running the server
