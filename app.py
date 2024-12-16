@@ -9,6 +9,11 @@ load_dotenv()  # Load environment variables from .env
 
 GOOGLE_GEOCODING_API_KEY = os.getenv('GOOGLE_GEOCODING_API_KEY')
 print("Loaded API Key: ", GOOGLE_GEOCODING_API_KEY)  # Debugging statement
+ATTOM_API_KEY = os.getenv('ATTOM_API_KEY')
+print("Loaded ATTOM API Key: ", ATTOM_API_KEY)  # Debugging statement
+BASE_URL = "https://api.gateway.attomdata.com/propertyapi/v1.0.0/property/detail"
+print(f"BASE_URL: {BASE_URL}")
+
 
 app = Flask(__name__)
 app.secret_key = 'test'  # Change this to a more secure key in production
@@ -34,15 +39,17 @@ def init_users_db():
 
 def init_db():
     try:
-        print("Initializing the database...")  
+        print("Initializing the database...")
 
         conn = sqlite3.connect('valuator.db')
         cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON;")
 
-        # Create form1 table for first step data
+        # Create consolidated table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS form1 (
+            CREATE TABLE IF NOT EXISTS valuator_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_number TEXT UNIQUE NOT NULL,
                 address TEXT,
                 unit TEXT,
                 city TEXT,
@@ -52,26 +59,8 @@ def init_db():
                 longitude REAL,
                 property_type TEXT,
                 borrower_name TEXT,
-                file_number TEXT UNIQUE,
                 county TEXT,
-                parcel_number TEXT
-            )
-        ''')
-        print("form1 table created (or already exists)")  # Debugging message
-
-        # Create table for Subject and Comparables data.
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS subject_value_table (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                subject_address TEXT,
-                subject_unit TEXT,
-                subject_city TEXT,
-                subject_state TEXT,
-                subject_zip TEXT,
-                subject_latitude REAL,
-                subject_longitude REAL,
-                subject_county TEXT,
-                subject_parcel_number TEXT,
+                parcel_number TEXT,
                 subject_data_source TEXT,
                 subject_mls TEXT,
                 subject_original_list_price REAL,
@@ -82,6 +71,7 @@ def init_db():
                 subject_site_size REAL,
                 subject_location TEXT,
                 subject_view TEXT,
+                subject_year_built INTEGER DEFAULT NULL,
                 subject_des_style TEXT,
                 subject_condition TEXT,
                 subject_beds INTEGER,
@@ -106,6 +96,7 @@ def init_db():
                 comp1_site_size REAL,
                 comp1_location TEXT,
                 comp1_view TEXT,
+                comp1_year_built INTEGER DEFAULT NULL,
                 comp1_des_style TEXT,
                 comp1_condition TEXT,
                 comp1_beds INTEGER,
@@ -129,6 +120,7 @@ def init_db():
                 comp2_site_size REAL,
                 comp2_location TEXT,
                 comp2_view TEXT,
+                comp2_year_built INTEGER DEFAULT NULL,
                 comp2_des_style TEXT,
                 comp2_condition TEXT,
                 comp2_beds INTEGER,
@@ -152,6 +144,7 @@ def init_db():
                 comp3_site_size REAL,
                 comp3_location TEXT,
                 comp3_view TEXT,
+                comp3_year_built INTEGER DEFAULT NULL,
                 comp3_des_style TEXT,
                 comp3_condition TEXT,
                 comp3_beds INTEGER,
@@ -162,8 +155,8 @@ def init_db():
                 comp3_garage TEXT
             )
         ''')
+        print("valuator_data table created successfully!")  # Debugging statement
 
-        print("subject_value_table successfully!")  # Debugging statement
         conn.commit()
         conn.close()
     except Exception as e:
@@ -200,7 +193,7 @@ def register():
         print(f"Password entered: {password}")
 
         error = register_user(username, password)
-        if error:
+        if (error):
             return error
         return redirect(url_for('index'))
     return render_template('register.html')
@@ -232,7 +225,7 @@ def check_file_number():
     conn = sqlite3.connect('valuator.db')
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM form1 WHERE file_number = ?', (file_number,))
+    cursor.execute('SELECT * FROM valuator_data WHERE file_number = ?', (file_number,))
     existing_entry = cursor.fetchone()
     conn.close()
 
@@ -256,7 +249,7 @@ def get_lat_lng():
 
         print("Geocoding API Response:", geocode_data)
 
-        if geocode_data['status'] == 'OK':
+        if (geocode_data['status'] == 'OK'):
             location = geocode_data['results'][0]['geometry']['location']
             return jsonify({'latitude': location['lat'], 'longitude': location['lng']})
         else:
@@ -295,7 +288,7 @@ def form_step1():
         # Check if file number already exists
         conn = sqlite3.connect('valuator.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT file_number FROM form1 WHERE file_number = ?', (file_number,))
+        cursor.execute('SELECT file_number FROM valuator_data WHERE file_number = ?', (file_number,))
         existing_entry = cursor.fetchone()
 
         if existing_entry:
@@ -305,12 +298,65 @@ def form_step1():
         # Debugging: Confirm data being inserted into the DB
         print("Inserting into DB:", address, unit, city, state, zip_code, latitude, longitude, property_type, borrower_name, file_number)
 
-        # Insert into DB
+        # Enable foreign keys
+        cursor.execute("PRAGMA foreign_keys = ON;")
+
+        # Insert into consolidated table
         cursor.execute('''
-            INSERT INTO form1 (address, unit, city, state, zip, latitude, longitude, property_type, borrower_name, file_number)
+            INSERT INTO valuator_data (file_number, address, unit, city, state, zip, latitude, longitude, property_type, borrower_name)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (address, unit, city, state, zip_code, latitude, longitude, property_type, borrower_name, file_number))
+        ''', (file_number, address, unit, city, state, zip_code, latitude, longitude, property_type, borrower_name))
         conn.commit()
+
+        # Fetch subject data from ATTOM API
+        headers = {
+            "Accept": "application/json",
+            "APIKey": ATTOM_API_KEY
+        }
+        params = {
+            "address1": address,
+            "address2": f"{city}, {state} {zip_code}"
+        }
+
+        response = requests.get(BASE_URL, headers=headers, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            if data["status"]["code"] == 0 and data["status"]["total"] > 0:
+                property_data = data["property"][0]
+
+                # Extract all needed data
+                county = property_data["area"].get("countrysecsubd", "")
+                parcel_number = property_data["identifier"].get("apn", "")
+                gla = property_data["building"]["size"].get("livingsize", None)
+                year_built = property_data["summary"].get("yearbuilt", None)
+                beds = property_data["building"]["rooms"].get("beds", None)
+                full_baths = property_data["building"]["rooms"].get("bathsfull", None)
+                half_baths = property_data["building"]["rooms"].get("bathstotal", 0) - full_baths if full_baths else 0
+                condition = property_data["building"]["construction"].get("condition", "")
+                view = property_data["building"]["summary"].get("view", "")
+                site_size = property_data["lot"].get("lotsize2", None)
+                garage = property_data["building"]["parking"].get("garagetype", "")
+                basement = property_data["building"]["interior"].get("bsmtsize", None)
+
+                # Update database
+                cursor.execute('''
+                    UPDATE valuator_data
+                    SET 
+                        county = ?, parcel_number = ?, subject_gla = ?, subject_year_built = ?, 
+                        subject_beds = ?, subject_full_baths = ?, subject_half_baths = ?, subject_condition = ?, 
+                        subject_view = ?, subject_site_size = ?, subject_garage = ?, subject_basement = ?
+                    WHERE file_number = ?
+                ''', (
+                    county, parcel_number, gla, year_built, beds, full_baths, half_baths, 
+                    condition, view, site_size, garage, basement, file_number
+                ))
+                conn.commit()
+                print("Subject data fetched and saved successfully.")
+            else:
+                print("No data found from ATTOM API.")
+        else:
+            print(f"Error fetching data from ATTOM API: {response.status_code} - {response.text}")
+
         conn.close()
 
         return redirect(url_for('form_step2', file_number=file_number))
@@ -328,10 +374,14 @@ def form_step2(file_number):
     if not session.get('user_id'):
         return redirect(url_for('index'))
 
-    # Fetch the data from form1 using the file_number
+    # Fetch the data from valuator_data using the file_number
     conn = sqlite3.connect('valuator.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM form1 WHERE file_number = ?', (file_number,))
+
+    # Enable foreign keys
+    cursor.execute("PRAGMA foreign_keys = ON;")
+
+    cursor.execute('SELECT * FROM valuator_data WHERE file_number = ?', (file_number,))
     existing_entry = cursor.fetchone()
 
     # If no entry exists for the provided file number, redirect back to Step 1
@@ -339,24 +389,37 @@ def form_step2(file_number):
         conn.close()
         return redirect(url_for('form_step1'))
 
-    # Pre-populate form with the existing data from form1
+    # Pre-populate form with the existing data from valuator_data
     prepopulated_data = {
-        'file_number': existing_entry[10],
-        'address': existing_entry[1],
-        'unit': existing_entry[2],
-        'city': existing_entry[3],
-        'state': existing_entry[4],
-        'zip': existing_entry[5],
-        'latitude': existing_entry[6], 
-        'longitude': existing_entry[7],
-        'borrower_name': existing_entry[9],
-        'property_type': existing_entry[8],
-        'county': existing_entry[11] if len(existing_entry) > 9 else "",
-        'parcel_number': existing_entry[12] if len(existing_entry) > 10 else ""
+        'file_number': existing_entry[1],
+        'address': existing_entry[2],
+        'unit': existing_entry[3],
+        'city': existing_entry[4],
+        'state': existing_entry[5],
+        'zip': existing_entry[6],
+        'latitude': existing_entry[7],
+        'longitude': existing_entry[8],
+        'borrower_name': existing_entry[10],
+        'property_type': existing_entry[9],
+        'county': existing_entry[11],
+        'parcel_number': existing_entry[12],
+        'subject_gla': existing_entry[29],
+        'subject_year_built': existing_entry[23],
+        'subject_beds': existing_entry[26],
+        'subject_full_baths': existing_entry[27],
+        'subject_half_baths': existing_entry[28],
+        'subject_condition': existing_entry[25],
+        'subject_view': existing_entry[22],
+        'subject_site_size': existing_entry[20],
+        'subject_garage': existing_entry[31],
+        'subject_basement': existing_entry[30],
+        'comp1_full_baths': existing_entry[52],
+        'comp2_full_baths': existing_entry[76],
+        'comp3_full_baths': existing_entry[100]
     }
 
     if request.method == 'POST':
-        # Collect subject data
+        # Collect subject data with defaults for optional fields
         subject_data = {
             'subject_address': request.form.get('subject_address', ""),
             'subject_unit': request.form.get('subject_unit', ""),
@@ -364,7 +427,7 @@ def form_step2(file_number):
             'subject_state': request.form.get('subject_state', ""),
             'subject_zip': request.form.get('subject_zip', ""),
             'subject_county': request.form.get('subject_county', ""),
-            'subject_parcel_number': request.form.get('parcel_number', ""),  # Ensure consistency
+            'subject_parcel_number': request.form.get('parcel_number', ""),
             'subject_data_source': request.form.get('subject_data_source', ""),
             'subject_mls': request.form.get('subject_mls', ""),
             'subject_original_list_price': request.form.get('subject_original_list_price', None),
@@ -386,7 +449,7 @@ def form_step2(file_number):
             'additional_comments': request.form.get('additional_comments', "")
         }
 
-        # Collect Comparable 1 data
+        # Collect Comparable 1 data with defaults for optional fields
         comp1_data = {
             'comp1_address': request.form.get('comp1_address', ""),
             'comp1_unit': request.form.get('comp1_unit', ""),
@@ -413,7 +476,7 @@ def form_step2(file_number):
             'comp1_garage': request.form.get('comp1_garage', "")
         }
 
-        # Collect Comparable 2 data
+        # Collect Comparable 2 data with defaults for optional fields
         comp2_data = {
             'comp2_address': request.form.get('comp2_address', ""),
             'comp2_unit': request.form.get('comp2_unit', ""),
@@ -440,7 +503,7 @@ def form_step2(file_number):
             'comp2_garage': request.form.get('comp2_garage', "")
         }
 
-        # Collect Comparable 3 data
+        # Collect Comparable 3 data with defaults for optional fields
         comp3_data = {
             'comp3_address': request.form.get('comp3_address', ""),
             'comp3_unit': request.form.get('comp3_unit', ""),
@@ -470,35 +533,13 @@ def form_step2(file_number):
         # Combine all data for insertion
         combined_data = {**subject_data, **comp1_data, **comp2_data, **comp3_data}
 
-        # Debugging: Print the number of fields and keys
-        print(f"Number of fields to insert: {len(combined_data)}")
-        print(f"Fields: {list(combined_data.keys())[:10]} ...")  # Print first 10 for brevity
-
         # Fetch database columns
-        cursor.execute("PRAGMA table_info(subject_value_table);")
+        cursor.execute("PRAGMA table_info(valuator_data);")
         db_columns_info = cursor.fetchall()
-        db_columns = [info[1] for info in db_columns_info]
-        if 'id' in db_columns:
-            db_columns.remove('id')  # Remove 'id' as it's auto-incremented
-
-        print(f"Number of DB columns (excluding 'id'): {len(db_columns)}")
-        print(f"DB Columns: {db_columns[:10]} ...")  # Print first 10 for brevity
-
-        # Identify mismatches
-        form_fields = set(combined_data.keys())
-        db_fields = set(db_columns)
-
-        extra_fields = form_fields - db_fields
-        missing_fields = db_fields - form_fields
-
-        print(f"Extra fields not in DB: {extra_fields}")
-        print(f"Missing fields in form: {missing_fields}")
-
-        if missing_fields:
-            return f"Missing fields in form submission: {missing_fields}", 400
+        db_columns = [info[1] for info in db_columns_info if info[1] != 'id']  # Exclude 'id'
 
         # Adjust combined_data to include only DB fields
-        valid_data = {key: combined_data[key] for key in db_columns if key in combined_data}
+        valid_data = {key: combined_data.get(key) for key in db_columns}
 
         # Prepare the INSERT statement
         placeholders = ', '.join(['?'] * len(valid_data))
@@ -506,7 +547,7 @@ def form_step2(file_number):
 
         try:
             cursor.execute(f'''
-                INSERT INTO subject_value_table ({columns}) VALUES ({placeholders})
+                INSERT INTO valuator_data ({columns}) VALUES ({placeholders})
             ''', tuple(valid_data.values()))
             conn.commit()
             print("Data inserted successfully.")
@@ -520,6 +561,120 @@ def form_step2(file_number):
         return redirect(url_for('dashboard'))  # Example redirection
 
     return render_template('form_step2.html', **prepopulated_data)  # Render Form Step 2 for GET requests
+
+@app.route('/api/subject-data', methods=['GET'])
+def api_subject_data():
+    file_number = request.args.get('file_number')
+
+    if not file_number:
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    try:
+        conn = sqlite3.connect('valuator.db')
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON;")
+
+        cursor.execute('SELECT * FROM valuator_data WHERE file_number = ?', (file_number,))
+        existing_entry = cursor.fetchone()
+        conn.close()
+
+        if not existing_entry:
+            return jsonify({"error": "No data found"}), 404
+
+        # Extract subject data from the database
+        subject_data = {
+            "address": existing_entry[2],
+            "unit": existing_entry[3],
+            "city": existing_entry[4],
+            "state": existing_entry[5],
+            "zip": existing_entry[6],
+            "county": existing_entry[11],
+            "parcel_number": existing_entry[12],
+            "gla": existing_entry[29],
+            "year_built": existing_entry[23],
+            "beds": existing_entry[26],
+            "full_baths": existing_entry[27],
+            "half_baths": existing_entry[28],
+            "condition": existing_entry[25],
+            "view": existing_entry[22],
+            "site_size": existing_entry[20],
+            "garage": existing_entry[31],
+            "basement": existing_entry[30]
+        }
+
+        return jsonify(subject_data)
+    except Exception as e:
+        print(f"Error in api_subject_data: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/comp-data', methods=['GET'])
+def api_comp_data():
+    file_number = request.args.get('file_number')
+    comp_number = request.args.get('comp_number')  # comp1, comp2, or comp3
+    address = request.args.get('address')
+    city = request.args.get('city')
+    zip_code = request.args.get('zip')
+
+    # Ensure required parameters are provided
+    if not all([file_number, comp_number, address, city, zip_code]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    try:
+        comp_number = int(comp_number)  # Ensure comp_number is an integer
+
+        conn = sqlite3.connect('valuator.db')
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON;")
+
+        # Query the database for the matching file number and other parameters
+        cursor.execute('''
+            SELECT * FROM valuator_data 
+            WHERE file_number = ? AND
+                  comp{0}_address = ? AND
+                  comp{0}_city = ? AND
+                  comp{0}_zip = ?
+        '''.format(comp_number), (file_number, address, city, zip_code))
+        existing_entry = cursor.fetchone()
+        conn.close()
+
+        if not existing_entry:
+            return jsonify({"error": "No data found"}), 404
+
+        # Extract comp data from the database
+        comp_data = {
+            "address": existing_entry[33 + (comp_number - 1) * 24],
+            "unit": existing_entry[34 + (comp_number - 1) * 24],
+            "city": existing_entry[35 + (comp_number - 1) * 24],
+            "state": existing_entry[36 + (comp_number - 1) * 24],
+            "zip": existing_entry[37 + (comp_number - 1) * 24],
+            "data_source": existing_entry[38 + (comp_number - 1) * 24],
+            "mls": existing_entry[39 + (comp_number - 1) * 24],
+            "original_list_price": existing_entry[40 + (comp_number - 1) * 24],
+            "original_list_date": existing_entry[41 + (comp_number - 1) * 24],
+            "sale_price": existing_entry[42 + (comp_number - 1) * 24],
+            "sale_date": existing_entry[43 + (comp_number - 1) * 24],
+            "cdom": existing_entry[44 + (comp_number - 1) * 24],
+            "site_size": existing_entry[45 + (comp_number - 1) * 24],
+            "location": existing_entry[46 + (comp_number - 1) * 24],
+            "view": existing_entry[47 + (comp_number - 1) * 24],
+            "year_built": existing_entry[48 + (comp_number - 1) * 24],
+            "des_style": existing_entry[49 + (comp_number - 1) * 24],
+            "condition": existing_entry[50 + (comp_number - 1) * 24],
+            "beds": existing_entry[51 + (comp_number - 1) * 24],
+            "full_baths": existing_entry[52 + (comp_number - 1) * 24],
+            "half_baths": existing_entry[53 + (comp_number - 1) * 24],
+            "gla": existing_entry[54 + (comp_number - 1) * 24],
+            "basement": existing_entry[55 + (comp_number - 1) * 24],
+            "garage": existing_entry[56 + (comp_number - 1) * 24]
+        }
+
+        return jsonify(comp_data)
+    except ValueError:
+        return jsonify({"error": "Invalid comp_number"}), 400
+    except Exception as e:
+        print(f"Error in api_comp_data: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     # Initialize the DB before running the server

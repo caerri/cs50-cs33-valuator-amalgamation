@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     console.log("DOM fully loaded and parsed.");
 
-    // Google Places Autocomplete to populate address fields
+    // Initialize Google Places Autocomplete
     function initAutocomplete() {
         const autocompleteInput = document.getElementById('autocomplete');
         if (!autocompleteInput) {
@@ -35,11 +35,11 @@ document.addEventListener("DOMContentLoaded", function () {
             state: 'administrative_area_level_1',
             zip: 'postal_code',
         };
-    
+
         Object.keys(fieldMappings).forEach((key) => {
             const field = document.getElementById(key);
             let value = "";
-    
+
             if (Array.isArray(fieldMappings[key])) {
                 value = fieldMappings[key]
                     .map((type) => {
@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     value = component ? component.long_name : "";
                 }
             }
-    
+
             if (field) {
                 field.value = value;
                 console.log(`${key} updated to: ${value}`);
@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Fetch geocode for the populated fields
+    // Fetch latitude and longitude for manual address entry
     function fetchLatLng() {
         const addressField = document.getElementById('address');
         const cityField = document.getElementById('city');
@@ -83,7 +83,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // Construct the address from the fields
         const fullAddress = `${addressField.value}, ${cityField.value}, ${stateField.value}, ${zipField.value}`;
         console.log('Geocoding address:', fullAddress);
 
@@ -115,12 +114,13 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    // Trigger `change` event programmatically for updated fields
     function triggerChangeEvent(field) {
         if (!field) return;
         const event = new Event('change', { bubbles: true });
         field.dispatchEvent(event);
     }
 
-    // Make initAutocomplete globally accessible
+    // Add missing global function for initialization
     window.initAutocomplete = initAutocomplete;
 });

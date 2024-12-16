@@ -56,7 +56,7 @@ def save_property_data(file_number, property_data, comp_id=None):
     zip_code = property_data["address"]["postal1"]
     county = property_data["area"].get("countyuse1", "") if not comp_id else None  # Include for subject only
     parcel_number = property_data["identifier"].get("apn", "") if not comp_id else None  # Include for subject only
-    lot_size = property_data["lot"].get("lotSize1", None)
+    lot_size = property_data["lot"].get("lotSize2", None)
     bedrooms = property_data["building"]["rooms"].get("beds", None)
     full_baths = property_data["building"]["rooms"].get("bathsfull", None)  # Full baths
     half_baths = property_data["building"]["rooms"].get("bathshalf", None)  # Half baths
@@ -67,13 +67,13 @@ def save_property_data(file_number, property_data, comp_id=None):
     prefix = f"comp{comp_id}_" if comp_id else "subject_"
 
     # Check if file_number exists
-    cursor.execute("SELECT 1 FROM subject_value_table WHERE file_number = ?", (file_number,))
+    cursor.execute("SELECT 1 FROM valuator_data WHERE file_number = ?", (file_number,))
     exists = cursor.fetchone()
 
     if exists:
         # Update existing row
         query = f"""
-            UPDATE subject_value_table
+            UPDATE valuator_data
             SET {prefix}address = ?, {prefix}city = ?, {prefix}state = ?, {prefix}zip = ?,
                 {prefix}lot_size = ?, {prefix}beds = ?, {prefix}full_baths = ?, {prefix}half_baths = ?,
                 {prefix}gla = ?, {prefix}year_built = ?
@@ -96,7 +96,7 @@ def save_property_data(file_number, property_data, comp_id=None):
     else:
         # Insert new row
         query = f"""
-            INSERT INTO subject_value_table (
+            INSERT INTO valuator_data (
                 file_number, {prefix}address, {prefix}city, {prefix}state, {prefix}zip,
                 {prefix}lot_size, {prefix}beds, {prefix}full_baths, {prefix}half_baths,
                 {prefix}gla, {prefix}year_built
@@ -138,7 +138,7 @@ def fetch_comp_data(file_number, address, city, state, zip_code, comp_id):
 
 # Main function to handle fetching and saving data
 def main():
-    file_number = "12345"  # Example file number
+    file_number = "test5"  # Example file number
 
     # Subject property details
     subject_address = "4529 Winona Ct"

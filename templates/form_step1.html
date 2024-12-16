@@ -147,13 +147,13 @@ providing a streamlined and responsive user experience.
         const fileNumber = document.getElementById("file_number").value;
 
         // Fetch the file_number from the server to check if it already exists
- fetch('/check_file_number', {
-    method: 'POST',
-    body: JSON.stringify({ file_number: fileNumber }),
-    headers: {
-        'Content-Type': 'application/json'
-    }
-})
+        fetch('/check_file_number', {
+            method: 'POST',
+            body: JSON.stringify({ file_number: fileNumber }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
         .then(response => response.json())
         .then(data => {
             if (data.exists) {

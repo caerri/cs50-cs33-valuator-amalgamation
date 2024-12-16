@@ -123,11 +123,23 @@ Comments:
             <!-- Header Row -->
             <div class="row">
                 <label for="header_placeholder"></label>
-                <div class="column-header">Subject</div>
-                <div class="column-header">Sale 1</div>
-                <div class="column-header">Sale 2</div>
-                <div class="column-header">Sale 3</div>
-            </div>
+                <div class="column-header">
+                    Subject
+                    <button type="button" class="fetch-button" onclick="fetchSubjectData()">🔄</button>
+                </div>
+                <div class="column-header">
+                    Sale 1
+                    <button type="button" class="fetch-button" onclick="fetchCompData(1)">🔄</button>
+                </div>
+                <div class="column-header">
+                    Sale 2
+                    <button type="button" class="fetch-button" onclick="fetchCompData(2)">🔄</button>
+                </div>
+                <div class="column-header">
+                    Sale 3
+                    <button type="button" class="fetch-button" onclick="fetchCompData(3)">🔄</button>
+                </div>
+            </div>            
 
             <!-- Row: Street Address -->
             <div class="row">
@@ -177,7 +189,7 @@ Comments:
             <!-- Data Source -->
             <div class="row">
                 <label for="subject_data_source">Data Source</label>
-                <input type="text" id="subject_data_source" name="subject_data_source" required data-row="5" data-col="0">
+                <input type="text" id="subject_data_source" name="subject_data_source" value="{{ subject_data_source }}" required data-row="5" data-col="0">
                 <input type="text" id="comp1_data_source" name="comp1_data_source" required data-row="5" data-col="1">
                 <input type="text" id="comp2_data_source" name="comp2_data_source" required data-row="5" data-col="2">
                 <input type="text" id="comp3_data_source" name="comp3_data_source" required data-row="5" data-col="3">
@@ -196,18 +208,18 @@ Comments:
             <div class="row">
                 <label>Original List Price</label>
                 <div> </div>
-                <input type="number" id="comp1_orig_list_price" name="comp1_original_list_price" required data-row="7" data-col="1">
-                <input type="number" id="comp2_orig_list_price" name="comp2_original_list_price" required data-row="7" data-col="2">
-                <input type="number" id="comp3_orig_list_price" name="comp3_original_list_price" required data-row="7" data-col="3">
+                <input type="number" id="comp1_original_list_price" name="comp1_original_list_price" required data-row="7" data-col="1">
+                <input type="number" id="comp2_original_list_price" name="comp2_original_list_price" required data-row="7" data-col="2">
+                <input type="number" id="comp3_original_list_price" name="comp3_original_list_price" required data-row="7" data-col="3">
             </div>
 
             <!-- Original List Date -->
             <div class="row">
                 <label>Original List Date</label>
                 <div> </div>
-                <input type="date" id="comp1_orig_list_date" name="comp1_original_list_date" required data-row="8" data-col="1">
-                <input type="date" id="comp2_orig_list_date" name="comp2_original_list_date" required data-row="8" data-col="2">
-                <input type="date" id="comp3_orig_list_date" name="comp3_original_list_date" required data-row="8" data-col="3">
+                <input type="date" id="comp1_original_list_date" name="comp1_original_list_date" required data-row="8" data-col="1">
+                <input type="date" id="comp2_original_list_date" name="comp2_original_list_date" required data-row="8" data-col="2">
+                <input type="date" id="comp3_original_list_date" name="comp3_original_list_date" required data-row="8" data-col="3">
             </div>
 
             <!-- Sale Price -->
@@ -240,16 +252,16 @@ Comments:
             <!-- Site Size -->
             <div class="row">
                 <label>Site Size</label>
-                <input type="number" id="subject_site_size" name="subject_site_size" required data-row="12" data-col="0">
-                <input type="number" id="comp1_site_size" name="comp1_site_size" required data-row="12" data-col="1">
-                <input type="number" id="comp2_site_size" name="comp2_site_size" required data-row="12" data-col="2">
+                <input type="number" id="subject_site_size" name="subject_site_size" value="{{ subject_site_size }}" required data-row="12" data-col="0">
+                <input type="number" id="comp1_site_size" name="comp1_site_size" value="{{ comp1_site_size }}" required data-row="12" data-col="1">
+                <input type="number" id="comp2_site_size" name="comp2_site_size" value="{{ comp1_site_size }}" required data-row="12" data-col="2">
                 <input type="number" id="comp3_site_size" name="comp3_site_size" required data-row="12" data-col="3">
             </div>
 
             <!-- Location -->
             <div class="row">
                 <label>Location</label>
-                <input type="text" id="subject_location" name="subject_location" required data-row="13" data-col="0">
+                <input type="text" id="subject_location" name="subject_location" value="{{ subject_location }}" required data-row="13" data-col="0">
                 <input type="text" id="comp1_location" name="comp1_location" required data-row="13" data-col="1">
                 <input type="text" id="comp2_location" name="comp2_location" required data-row="13" data-col="2">
                 <input type="text" id="comp3_location" name="comp3_location" required data-row="13" data-col="3">
@@ -258,7 +270,7 @@ Comments:
             <!-- View -->
             <div class="row">
                 <label>View</label>
-                <select id="subject_view" name="subject_view" required data-row="14" data-col="0"></select>
+                <select id="subject_view" name="subject_view" value="{{ subject_view }}" required data-row="14" data-col="0"></select>
                 <select id="comp1_view" name="comp1_view" required data-row="14" data-col="1"></select>
                 <select id="comp2_view" name="comp2_view" required data-row="14" data-col="2"></select>
                 <select id="comp3_view" name="comp3_view" required data-row="14" data-col="3"></select>
@@ -266,7 +278,7 @@ Comments:
             <!-- Des/Style -->  
             <div class="row">
                 <label>Des/Style</label>
-                <select id="subject_des_style" name="subject_des_style" required data-row="15" data-col="0">
+                <select id="subject_des_style" name="subject_des_style" value="{{ subject_des_style }}" required data-row="15" data-col="0">
                     <option value="{{ property_type }}" selected>{{ property_type }}</option>
                     <!-- Options will be populated by JavaScript below -->
                 </select>
@@ -278,7 +290,7 @@ Comments:
             <!-- Condition -->
             <div class="row">
                 <label>Condition</label>
-                <select id="subject_condition" name="subject_condition" required data-row="16" data-col="0"></select>
+                <select id="subject_condition" name="subject_condition" value="{{ subject_condition }}" required data-row="16" data-col="0"></select>
                 <select id="comp1_condition" name="comp1_condition" required data-row="16" data-col="1"></select>
                 <select id="comp2_condition" name="comp2_condition" required data-row="16" data-col="2"></select>
                 <select id="comp3_condition" name="comp3_condition" required data-row="16" data-col="3"></select>
@@ -287,7 +299,7 @@ Comments:
             <!-- Beds -->
             <div class="row">
                 <label>Beds</label>
-                <input type="number" id="subject_beds" name="subject_beds" required data-row="17" data-col="0">
+                <input type="number" id="subject_beds" name="subject_beds" value="{{ subject_beds }}" required data-row="17" data-col="0">
                 <input type="number" id="comp1_beds" name="comp1_beds" required data-row="17" data-col="1">
                 <input type="number" id="comp2_beds" name="comp2_beds" required data-row="17" data-col="2">
                 <input type="number" id="comp3_beds" name="comp3_beds" required data-row="17" data-col="3">
@@ -296,7 +308,7 @@ Comments:
             <!-- Full Baths -->
             <div class="row">
                 <label>Full Baths</label>
-                <input type="number" id="subject_full_baths" name="subject_full_baths" required data-row="18" data-col="0">
+                <input type="number" id="subject_full_baths" name="subject_full_baths" value="{{ subject_full_baths }}" required data-row="18" data-col="0">
                 <input type="number" id="comp1_full_baths" name="comp1_full_baths" required data-row="18" data-col="1">
                 <input type="number" id="comp2_full_baths" name="comp2_full_baths" required data-row="18" data-col="2">
                 <input type="number" id="comp3_full_baths" name="comp3_full_baths" required data-row="18" data-col="3">
@@ -305,7 +317,7 @@ Comments:
             <!-- Half Baths -->
             <div class="row">
                 <label>Half Baths</label>
-                <input type="number" id="subject_half_baths" name="subject_half_baths" data-row="19" data-col="0">
+                <input type="number" id="subject_half_baths" name="subject_half_baths" value="{{ subject_half_baths }}" data-row="19" data-col="0">
                 <input type="number" id="comp1_half_baths" name="comp1_half_baths" data-row="19" data-col="1">
                 <input type="number" id="comp2_half_baths" name="comp2_half_baths" data-row="19" data-col="2">
                 <input type="number" id="comp3_half_baths" name="comp3_half_baths" data-row="19" data-col="3">
@@ -314,10 +326,10 @@ Comments:
             <!-- GLA -->
             <div class="row">
                 <label>GLA</label>
-                <input type="number" id="subject_gla" name="subject_gla" required data-row="20" data-col="0">
-                <input type="number" id="comp1_gla" name="comp1_gla" required data-row="20" data-col="1">
-                <input type="number" id="comp2_gla" name="comp2_gla" required data-row="20" data-col="2">
-                <input type="number" id="comp3_gla" name="comp3_gla" required data-row="20" data-col="3">
+                <input type="number" id="subject_gla" name="subject_gla" value="{{ subject_gla }}" required data-row="20" data-col="0">
+                <input type="number" id="comp1_gla" name="comp1_gla" value="{{ comp1_gla }}" required data-row="20" data-col="1">
+                <input type="number" id="comp2_gla" name="comp2_gla" value="{{ comp2_gla }}" required data-row="20" data-col="2">
+                <input type="number" id="comp3_gla" name="comp3_gla" value="{{ comp3_gla }}" required data-row="20" data-col="3">
             </div>
 
             <!-- Basement -->
@@ -392,12 +404,19 @@ Comments:
             </div>
         </div>
 
+        <input type="hidden" name="file_number" value="{{ file_number }}">
+        <input type="hidden" name="subject_latitude" value="{{ latitude or 0.0 }}">
+        <input type="hidden" name="subject_longitude" value="{{ longitude or 0.0 }}">
+        <input type="hidden" name="subject_year_built" value="{{ year_built or 1900 }}">
+
         <!-- Submit Button Inside the Form -->
         <div class="button-row">
             <button type="submit" class="next-button">Save and Continue</button>
         </div>
     </form>
 </div>
+
+<script src="{{ url_for('static', filename='js/api_fetch_property_data.js') }}"></script>
 
 <!-- Leaflet JS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -428,24 +447,40 @@ Comments:
             e.preventDefault();
             if (e.shiftKey) {
                 // Shift+Enter: Move up
-                newRow = row > 0 ? row - 1 : row;
+                newRow = row > 0 ? row - 1 : maxRow;
+                if (newRow === maxRow && row === 0) {
+                    newCol = col > 0 ? col - 1 : maxCol;
+                }
             } else {
                 // Enter: Move down
-                newRow = row < maxRow ? row + 1 : row;
+                newRow = row < maxRow ? row + 1 : 0;
+                if (newRow === 0 && row === maxRow) {
+                    newCol = col < maxCol ? col + 1 : 0;
+                }
             }
         } else if (e.key === 'Tab') {
             e.preventDefault();
             if (e.shiftKey) {
                 // Shift+Tab: Move left
-                newCol = col > 0 ? col - 1 : col;
+                newCol = col > 0 ? col - 1 : maxCol;
+                if (newCol === maxCol && col === 0) {
+                    newRow = row > 0 ? row - 1 : maxRow;
+                }
             } else {
                 // Tab: Move right
-                newCol = col < maxCol ? col + 1 : col;
+                newCol = col < maxCol ? col + 1 : 0;
+                if (newCol === 0 && col === maxCol) {
+                    newRow = row < maxRow ? row + 1 : 0;
+                }
             }
         } else {
             // Not Enter or Tab, do nothing special
             return;
         }
+
+        // Ensure newRow and newCol are within bounds
+        newRow = Math.max(0, Math.min(newRow, maxRow));
+        newCol = Math.max(0, Math.min(newCol, maxCol));
 
         const nextField = document.querySelector(`#comps-grid [data-row="${newRow}"][data-col="${newCol}"]`);
         if (nextField) {
@@ -456,5 +491,5 @@ Comments:
 
 <!-- Combined JavaScript Files -->
 <script src="{{ url_for('static', filename='js/combined-js.js') }}"></script>
-<script src="{{ url_for('static', filename='js/dropdown.js') }}"></script>
+<script src="/static/js/dropdown.js"></script>
 {% endblock %}
