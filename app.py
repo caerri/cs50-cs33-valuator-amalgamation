@@ -685,6 +685,3 @@ if __name__ == "__main__":
         init_db()
         init_users_db()
     app.run(debug=True)
-
-
-application = app
