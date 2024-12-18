@@ -1,3 +1,4 @@
+#!/home/dh_kfekwx/bin/python3
 import sqlite3
 from flask import Flask, request, redirect, url_for, render_template, session, jsonify
 # from app import app as application
@@ -5,6 +6,7 @@ from auth import register_user, validate_user  # from auth.py
 import requests  # Intended to support ATTOM API integration on future deployment.
 from dotenv import load_dotenv
 import os
+from flup.server.fcgi import WSGIServer
 
 load_dotenv()  # Load environment variables from .env
 

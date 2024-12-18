@@ -1,5 +1,8 @@
+#!/home/dh_kfekwx/bin/python3
+
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
+from flup.server.fcgi import WSGIServer
 
 def register_user(username, password):
     # Register a new user with the given username and password

@@ -1,3 +1,5 @@
+#!/home/dh_kfekwx/bin/python3
+
 import sqlite3
 from flask import Flask, request, redirect, url_for, render_template, session, jsonify
 from auth import register_user, validate_user  # from auth.py

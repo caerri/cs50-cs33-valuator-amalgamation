@@ -1,3 +1,5 @@
+#!/home/dh_kfekwx/bin/python3
+
 import sqlite3
 
 def connect_to_db(db_name):
