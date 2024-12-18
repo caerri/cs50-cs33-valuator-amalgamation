@@ -1,5 +1,6 @@
 import sqlite3
 from flask import Flask, request, redirect, url_for, render_template, session, jsonify
+# from app import app as application
 from auth import register_user, validate_user  # from auth.py
 import requests  # Intended to support ATTOM API integration on future deployment.
 from dotenv import load_dotenv
@@ -682,3 +683,6 @@ if __name__ == "__main__":
         init_db()
         init_users_db()
     app.run(debug=True)
+
+
+application = app
